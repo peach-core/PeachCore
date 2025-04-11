@@ -1,11 +1,18 @@
 use core::cmp::Ordering;
 
-use crate::config::CLOCK_FREQ;
-use crate::sbi::set_timer;
-use crate::sync::UPIntrFreeCell;
-use crate::task::{wakeup_task, TaskControlBlock};
-use alloc::collections::BinaryHeap;
-use alloc::sync::Arc;
+use crate::{
+    config::CLOCK_FREQ,
+    sbi::set_timer,
+    sync::UPIntrFreeCell,
+    task::{
+        wakeup_task,
+        TaskControlBlock,
+    },
+};
+use alloc::{
+    collections::BinaryHeap,
+    sync::Arc,
+};
 use lazy_static::*;
 use riscv::register::time;
 

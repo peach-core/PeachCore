@@ -2,11 +2,20 @@
 ///! Ref: ns16550a datasheet: https://datasheetspdf.com/pdf-file/605590/NationalSemiconductor/NS16550A/1
 ///! Ref: ns16450 datasheet: https://datasheetspdf.com/pdf-file/1311818/NationalSemiconductor/NS16450/1
 use super::CharDevice;
-use crate::sync::{Condvar, UPIntrFreeCell};
-use crate::task::schedule;
+use crate::{
+    sync::{
+        Condvar,
+        UPIntrFreeCell,
+    },
+    task::schedule,
+};
 use alloc::collections::VecDeque;
 use bitflags::*;
-use volatile::{ReadOnly, Volatile, WriteOnly};
+use volatile::{
+    ReadOnly,
+    Volatile,
+    WriteOnly,
+};
 
 bitflags! {
     /// InterruptEnableRegister

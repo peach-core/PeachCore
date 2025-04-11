@@ -1,8 +1,17 @@
-use super::{PhysAddr, PhysPageNum};
-use crate::config::MEMORY_END;
-use crate::sync::UPIntrFreeCell;
+use super::{
+    PhysAddr,
+    PhysPageNum,
+};
+use crate::{
+    config::MEMORY_END,
+    sync::UPIntrFreeCell,
+};
 use alloc::vec::Vec;
-use core::fmt::{self, Debug, Formatter};
+use core::fmt::{
+    self,
+    Debug,
+    Formatter,
+};
 use lazy_static::*;
 
 pub struct FrameTracker {

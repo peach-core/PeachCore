@@ -5,16 +5,30 @@ pub mod udp;
 
 pub use lose_net_stack::IPv4;
 
-use alloc::{sync::Arc, vec};
-use lose_net_stack::{results::Packet, LoseStack, MacAddress, TcpFlags};
+use alloc::{
+    sync::Arc,
+    vec,
+};
+use lose_net_stack::{
+    results::Packet,
+    LoseStack,
+    MacAddress,
+    TcpFlags,
+};
 
 use crate::{
     drivers::NET_DEVICE,
-    net::socket::{get_socket, push_data},
+    net::socket::{
+        get_socket,
+        push_data,
+    },
     sync::UPIntrFreeCell,
 };
 
-use self::{port_table::check_accept, socket::set_s_a_by_index};
+use self::{
+    port_table::check_accept,
+    socket::set_s_a_by_index,
+};
 
 pub struct NetStack(UPIntrFreeCell<LoseStack>);
 

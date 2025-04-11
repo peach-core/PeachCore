@@ -1,10 +1,15 @@
-use alloc::{sync::Arc, vec::Vec};
+use alloc::{
+    sync::Arc,
+    vec::Vec,
+};
 use lazy_static::lazy_static;
 use lose_net_stack::packets::tcp::TCPPacket;
 
-use crate::fs::File;
-use crate::sync::UPIntrFreeCell;
-use crate::task::TaskControlBlock;
+use crate::{
+    fs::File,
+    sync::UPIntrFreeCell,
+    task::TaskControlBlock,
+};
 
 use super::tcp::TCP;
 

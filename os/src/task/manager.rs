@@ -1,7 +1,16 @@
-use super::{ProcessControlBlock, TaskControlBlock, TaskStatus};
+use super::{
+    ProcessControlBlock,
+    TaskControlBlock,
+    TaskStatus,
+};
 use crate::sync::UPIntrFreeCell;
-use alloc::collections::{BTreeMap, VecDeque};
-use alloc::sync::Arc;
+use alloc::{
+    collections::{
+        BTreeMap,
+        VecDeque,
+    },
+    sync::Arc,
+};
 use lazy_static::*;
 
 pub struct TaskManager {

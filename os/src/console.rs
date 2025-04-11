@@ -1,6 +1,11 @@
-use crate::drivers::chardev::CharDevice;
-use crate::drivers::chardev::UART;
-use core::fmt::{self, Write};
+use crate::drivers::chardev::{
+    CharDevice,
+    UART,
+};
+use core::fmt::{
+    self,
+    Write,
+};
 
 struct Stdout;
 

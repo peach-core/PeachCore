@@ -1,6 +1,14 @@
-use crate::drivers::GPU_DEVICE;
-use crate::mm::{MapArea, MapPermission, MapType, PhysAddr, VirtAddr};
-use crate::task::current_process;
+use crate::{
+    drivers::GPU_DEVICE,
+    mm::{
+        MapArea,
+        MapPermission,
+        MapType,
+        PhysAddr,
+        VirtAddr,
+    },
+    task::current_process,
+};
 
 const FB_VADDR: usize = 0x10000000;
 

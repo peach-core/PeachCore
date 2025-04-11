@@ -1,8 +1,15 @@
-use super::__switch;
-use super::{fetch_task, TaskStatus};
-use super::{ProcessControlBlock, TaskContext, TaskControlBlock};
-use crate::sync::UPIntrFreeCell;
-use crate::trap::TrapContext;
+use super::{
+    __switch,
+    fetch_task,
+    ProcessControlBlock,
+    TaskContext,
+    TaskControlBlock,
+    TaskStatus,
+};
+use crate::{
+    sync::UPIntrFreeCell,
+    trap::TrapContext,
+};
 use alloc::sync::Arc;
 use core::arch::asm;
 use lazy_static::*;

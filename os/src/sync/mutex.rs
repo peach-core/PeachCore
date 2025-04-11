@@ -1,8 +1,15 @@
 use super::UPIntrFreeCell;
-use crate::task::TaskControlBlock;
-use crate::task::{block_current_and_run_next, suspend_current_and_run_next};
-use crate::task::{current_task, wakeup_task};
-use alloc::{collections::VecDeque, sync::Arc};
+use crate::task::{
+    block_current_and_run_next,
+    current_task,
+    suspend_current_and_run_next,
+    wakeup_task,
+    TaskControlBlock,
+};
+use alloc::{
+    collections::VecDeque,
+    sync::Arc,
+};
 
 pub trait Mutex: Sync + Send {
     fn lock(&self);

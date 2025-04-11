@@ -1,12 +1,20 @@
-use super::net_interrupt_handler;
-use super::socket::{add_socket, pop_data, remove_socket};
-use super::LOSE_NET_STACK;
-use super::NET_DEVICE;
+use super::{
+    net_interrupt_handler,
+    socket::{
+        add_socket,
+        pop_data,
+        remove_socket,
+    },
+    LOSE_NET_STACK,
+    NET_DEVICE,
+};
 use crate::fs::File;
 use alloc::vec;
-use lose_net_stack::packets::udp::UDPPacket;
-use lose_net_stack::IPv4;
-use lose_net_stack::MacAddress;
+use lose_net_stack::{
+    packets::udp::UDPPacket,
+    IPv4,
+    MacAddress,
+};
 
 pub struct UDP {
     pub target: IPv4,

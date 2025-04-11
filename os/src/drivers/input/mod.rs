@@ -1,10 +1,20 @@
-use crate::drivers::bus::virtio::VirtioHal;
-use crate::sync::{Condvar, UPIntrFreeCell};
-use crate::task::schedule;
-use alloc::collections::VecDeque;
-use alloc::sync::Arc;
+use crate::{
+    drivers::bus::virtio::VirtioHal,
+    sync::{
+        Condvar,
+        UPIntrFreeCell,
+    },
+    task::schedule,
+};
+use alloc::{
+    collections::VecDeque,
+    sync::Arc,
+};
 use core::any::Any;
-use virtio_drivers::{VirtIOHeader, VirtIOInput};
+use virtio_drivers::{
+    VirtIOHeader,
+    VirtIOInput,
+};
 
 const VIRTIO5: usize = 0x10005000;
 const VIRTIO6: usize = 0x10006000;

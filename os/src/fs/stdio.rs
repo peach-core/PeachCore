@@ -1,7 +1,11 @@
 use super::File;
-use crate::drivers::chardev::CharDevice;
-use crate::drivers::chardev::UART;
-use crate::mm::UserBuffer;
+use crate::{
+    drivers::chardev::{
+        CharDevice,
+        UART,
+    },
+    mm::UserBuffer,
+};
 
 pub struct Stdin;
 pub struct Stdout;

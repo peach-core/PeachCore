@@ -1,7 +1,14 @@
 use crate::{
     mm::kernel_token,
-    task::{add_task, current_task, TaskControlBlock},
-    trap::{trap_handler, TrapContext},
+    task::{
+        add_task,
+        current_task,
+        TaskControlBlock,
+    },
+    trap::{
+        trap_handler,
+        TrapContext,
+    },
 };
 use alloc::sync::Arc;
 

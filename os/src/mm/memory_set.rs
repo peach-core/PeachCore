@@ -1,12 +1,30 @@
-use super::{frame_alloc, FrameTracker};
-use super::{PTEFlags, PageTable, PageTableEntry};
-use super::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum};
-use super::{StepByOne, VPNRange};
-use crate::config::{MEMORY_END, MMIO, PAGE_SIZE, TRAMPOLINE};
-use crate::sync::UPIntrFreeCell;
-use alloc::collections::BTreeMap;
-use alloc::sync::Arc;
-use alloc::vec::Vec;
+use super::{
+    frame_alloc,
+    FrameTracker,
+    PTEFlags,
+    PageTable,
+    PageTableEntry,
+    PhysAddr,
+    PhysPageNum,
+    StepByOne,
+    VPNRange,
+    VirtAddr,
+    VirtPageNum,
+};
+use crate::{
+    config::{
+        MEMORY_END,
+        MMIO,
+        PAGE_SIZE,
+        TRAMPOLINE,
+    },
+    sync::UPIntrFreeCell,
+};
+use alloc::{
+    collections::BTreeMap,
+    sync::Arc,
+    vec::Vec,
+};
 use core::arch::asm;
 use lazy_static::*;
 use riscv::register::satp;
@@ -50,10 +68,7 @@ impl MemorySet {
     }
     /// Assume that no conflicts.
     pub fn insert_framed_area(
-        &mut self,
-        start_va: VirtAddr,
-        end_va: VirtAddr,
-        permission: MapPermission,
+        &mut self, start_va: VirtAddr, end_va: VirtAddr, permission: MapPermission,
     ) {
         self.push(
             MapArea::new(start_va, end_va, MapType::Framed, permission),
@@ -256,10 +271,7 @@ pub struct MapArea {
 
 impl MapArea {
     pub fn new(
-        start_va: VirtAddr,
-        end_va: VirtAddr,
-        map_type: MapType,
-        map_perm: MapPermission,
+        start_va: VirtAddr, end_va: VirtAddr, map_type: MapType, map_perm: MapPermission,
     ) -> Self {
         let start_vpn: VirtPageNum = start_va.floor();
         let end_vpn: VirtPageNum = end_va.ceil();

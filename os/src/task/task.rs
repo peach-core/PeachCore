@@ -1,11 +1,22 @@
-use super::id::TaskUserRes;
-use super::{kstack_alloc, KernelStack, ProcessControlBlock, TaskContext};
-use crate::trap::TrapContext;
+use super::{
+    id::TaskUserRes,
+    kstack_alloc,
+    KernelStack,
+    ProcessControlBlock,
+    TaskContext,
+};
 use crate::{
     mm::PhysPageNum,
-    sync::{UPIntrFreeCell, UPIntrRefMut},
+    sync::{
+        UPIntrFreeCell,
+        UPIntrRefMut,
+    },
+    trap::TrapContext,
 };
-use alloc::sync::{Arc, Weak};
+use alloc::sync::{
+    Arc,
+    Weak,
+};
 
 pub struct TaskControlBlock {
     // immutable
@@ -48,9 +59,7 @@ impl TaskControlBlockInner {
 
 impl TaskControlBlock {
     pub fn new(
-        process: Arc<ProcessControlBlock>,
-        ustack_base: usize,
-        alloc_user_res: bool,
+        process: Arc<ProcessControlBlock>, ustack_base: usize, alloc_user_res: bool,
     ) -> Self {
         let res = TaskUserRes::new(Arc::clone(&process), ustack_base, alloc_user_res);
         let trap_cx_ppn = res.trap_cx_ppn();

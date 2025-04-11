@@ -9,23 +9,52 @@ mod switch;
 mod task;
 
 use self::id::TaskUserRes;
-use crate::fs::{open_file, OpenFlags};
-use crate::sbi::shutdown;
-use alloc::{sync::Arc, vec::Vec};
+use crate::{
+    fs::{
+        open_file,
+        OpenFlags,
+    },
+    sbi::shutdown,
+};
+use alloc::{
+    sync::Arc,
+    vec::Vec,
+};
 use lazy_static::*;
 use manager::fetch_task;
 use process::ProcessControlBlock;
 use switch::__switch;
 
 pub use context::TaskContext;
-pub use id::{kstack_alloc, pid_alloc, KernelStack, PidHandle, IDLE_PID};
-pub use manager::{add_task, pid2process, remove_from_pid2process, wakeup_task};
+pub use id::{
+    kstack_alloc,
+    pid_alloc,
+    KernelStack,
+    PidHandle,
+    IDLE_PID,
+};
+pub use manager::{
+    add_task,
+    pid2process,
+    remove_from_pid2process,
+    wakeup_task,
+};
 pub use processor::{
-    current_kstack_top, current_process, current_task, current_trap_cx, current_trap_cx_user_va,
-    current_user_token, run_tasks, schedule, take_current_task,
+    current_kstack_top,
+    current_process,
+    current_task,
+    current_trap_cx,
+    current_trap_cx_user_va,
+    current_user_token,
+    run_tasks,
+    schedule,
+    take_current_task,
 };
 pub use signal::SignalFlags;
-pub use task::{TaskControlBlock, TaskStatus};
+pub use task::{
+    TaskControlBlock,
+    TaskStatus,
+};
 
 pub fn suspend_current_and_run_next() {
     // There must be an application running.

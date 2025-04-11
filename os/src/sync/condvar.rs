@@ -1,9 +1,21 @@
-use crate::sync::{Mutex, UPIntrFreeCell};
-use crate::task::{
-    block_current_and_run_next, block_current_task, current_task, wakeup_task, TaskContext,
-    TaskControlBlock,
+use crate::{
+    sync::{
+        Mutex,
+        UPIntrFreeCell,
+    },
+    task::{
+        block_current_and_run_next,
+        block_current_task,
+        current_task,
+        wakeup_task,
+        TaskContext,
+        TaskControlBlock,
+    },
 };
-use alloc::{collections::VecDeque, sync::Arc};
+use alloc::{
+    collections::VecDeque,
+    sync::Arc,
+};
 
 pub struct Condvar {
     pub inner: UPIntrFreeCell<CondvarInner>,

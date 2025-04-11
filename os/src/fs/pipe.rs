@@ -1,7 +1,12 @@
 use super::File;
-use crate::mm::UserBuffer;
-use crate::sync::UPIntrFreeCell;
-use alloc::sync::{Arc, Weak};
+use crate::{
+    mm::UserBuffer,
+    sync::UPIntrFreeCell,
+};
+use alloc::sync::{
+    Arc,
+    Weak,
+};
 
 use crate::task::suspend_current_and_run_next;
 

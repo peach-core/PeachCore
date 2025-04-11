@@ -1,5 +1,7 @@
-use alloc::collections::VecDeque;
-use alloc::vec::Vec;
+use alloc::{
+    collections::VecDeque,
+    vec::Vec,
+};
 use lazy_static::lazy_static;
 use lose_net_stack::IPv4;
 

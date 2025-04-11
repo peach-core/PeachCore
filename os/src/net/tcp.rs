@@ -1,15 +1,24 @@
 use alloc::vec;
-use lose_net_stack::packets::tcp::TCPPacket;
-use lose_net_stack::IPv4;
-use lose_net_stack::MacAddress;
-use lose_net_stack::TcpFlags;
+use lose_net_stack::{
+    packets::tcp::TCPPacket,
+    IPv4,
+    MacAddress,
+    TcpFlags,
+};
 
-use crate::{drivers::NET_DEVICE, fs::File};
+use crate::{
+    drivers::NET_DEVICE,
+    fs::File,
+};
 
-use super::socket::get_s_a_by_index;
 use super::{
     net_interrupt_handler,
-    socket::{add_socket, pop_data, remove_socket},
+    socket::{
+        add_socket,
+        get_s_a_by_index,
+        pop_data,
+        remove_socket,
+    },
     LOSE_NET_STACK,
 };
 

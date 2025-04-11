@@ -1,9 +1,25 @@
 use super::ProcessControlBlock;
-use crate::config::{KERNEL_STACK_SIZE, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT_BASE, USER_STACK_SIZE};
-use crate::mm::{MapPermission, PhysPageNum, VirtAddr, KERNEL_SPACE};
-use crate::sync::UPIntrFreeCell;
+use crate::{
+    config::{
+        KERNEL_STACK_SIZE,
+        PAGE_SIZE,
+        TRAMPOLINE,
+        TRAP_CONTEXT_BASE,
+        USER_STACK_SIZE,
+    },
+    mm::{
+        MapPermission,
+        PhysPageNum,
+        VirtAddr,
+        KERNEL_SPACE,
+    },
+    sync::UPIntrFreeCell,
+};
 use alloc::{
-    sync::{Arc, Weak},
+    sync::{
+        Arc,
+        Weak,
+    },
     vec::Vec,
 };
 use lazy_static::*;
@@ -126,9 +142,7 @@ fn ustack_bottom_from_tid(ustack_base: usize, tid: usize) -> usize {
 
 impl TaskUserRes {
     pub fn new(
-        process: Arc<ProcessControlBlock>,
-        ustack_base: usize,
-        alloc_user_res: bool,
+        process: Arc<ProcessControlBlock>, ustack_base: usize, alloc_user_res: bool,
     ) -> Self {
         let tid = process.inner_exclusive_access().alloc_tid();
         let task_user_res = Self {

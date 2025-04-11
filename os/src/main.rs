@@ -4,7 +4,11 @@
 #![feature(alloc_error_handler)]
 
 //use crate::drivers::{GPU_DEVICE, KEYBOARD_DEVICE, MOUSE_DEVICE, INPUT_CONDVAR};
-use crate::drivers::{GPU_DEVICE, KEYBOARD_DEVICE, MOUSE_DEVICE};
+use crate::drivers::{
+    GPU_DEVICE,
+    KEYBOARD_DEVICE,
+    MOUSE_DEVICE,
+};
 extern crate alloc;
 
 #[macro_use]
@@ -31,8 +35,10 @@ mod task;
 mod timer;
 mod trap;
 
-use crate::drivers::chardev::CharDevice;
-use crate::drivers::chardev::UART;
+use crate::drivers::chardev::{
+    CharDevice,
+    UART,
+};
 
 core::arch::global_asm!(include_str!("entry.asm"));
 

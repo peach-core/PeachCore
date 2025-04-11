@@ -18,10 +18,19 @@ pub const VIRTGPU_XRES: u32 = 1280;
 #[allow(unused)]
 pub const VIRTGPU_YRES: u32 = 800;
 
-use crate::drivers::block::BLOCK_DEVICE;
-use crate::drivers::chardev::{CharDevice, UART};
-use crate::drivers::plic::{IntrTargetPriority, PLIC};
-use crate::drivers::{KEYBOARD_DEVICE, MOUSE_DEVICE};
+use crate::drivers::{
+    block::BLOCK_DEVICE,
+    chardev::{
+        CharDevice,
+        UART,
+    },
+    plic::{
+        IntrTargetPriority,
+        PLIC,
+    },
+    KEYBOARD_DEVICE,
+    MOUSE_DEVICE,
+};
 
 pub fn device_init() {
     use riscv::register::sie;

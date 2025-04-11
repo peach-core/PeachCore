@@ -1,6 +1,16 @@
-use crate::sync::UPIntrFreeCell;
-use crate::task::{block_current_and_run_next, current_task, wakeup_task, TaskControlBlock};
-use alloc::{collections::VecDeque, sync::Arc};
+use crate::{
+    sync::UPIntrFreeCell,
+    task::{
+        block_current_and_run_next,
+        current_task,
+        wakeup_task,
+        TaskControlBlock,
+    },
+};
+use alloc::{
+    collections::VecDeque,
+    sync::Arc,
+};
 
 pub struct Semaphore {
     pub inner: UPIntrFreeCell<SemaphoreInner>,

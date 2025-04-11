@@ -1,5 +1,14 @@
-use core::cell::{RefCell, RefMut, UnsafeCell};
-use core::ops::{Deref, DerefMut};
+use core::{
+    cell::{
+        RefCell,
+        RefMut,
+        UnsafeCell,
+    },
+    ops::{
+        Deref,
+        DerefMut,
+    },
+};
 use lazy_static::*;
 use riscv::register::sstatus;
 

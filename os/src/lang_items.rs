@@ -1,7 +1,11 @@
-use crate::sbi::shutdown;
-use crate::task::current_kstack_top;
-use core::arch::asm;
-use core::panic::PanicInfo;
+use crate::{
+    sbi::shutdown,
+    task::current_kstack_top,
+};
+use core::{
+    arch::asm,
+    panic::PanicInfo,
+};
 use log::*;
 
 #[panic_handler]

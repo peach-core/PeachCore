@@ -1,10 +1,15 @@
 use core::any::Any;
 
-use crate::drivers::virtio::VirtioHal;
-use crate::sync::UPIntrFreeCell;
+use crate::{
+    drivers::virtio::VirtioHal,
+    sync::UPIntrFreeCell,
+};
 use alloc::sync::Arc;
 use lazy_static::*;
-use virtio_drivers::{VirtIOHeader, VirtIONet};
+use virtio_drivers::{
+    VirtIOHeader,
+    VirtIONet,
+};
 
 const VIRTIO8: usize = 0x10004000;
 

@@ -1,5 +1,8 @@
 //use crate::drivers::{KEYBOARD_DEVICE,MOUSE_DEVICE,INPUT_CONDVAR,read_input_event};
-use crate::drivers::{KEYBOARD_DEVICE, MOUSE_DEVICE};
+use crate::drivers::{
+    KEYBOARD_DEVICE,
+    MOUSE_DEVICE,
+};
 
 pub fn sys_event_get() -> isize {
     let kb = KEYBOARD_DEVICE.clone();
