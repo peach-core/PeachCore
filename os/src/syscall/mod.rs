@@ -37,7 +37,7 @@ mod fs;
 mod gui;
 mod input;
 mod net;
-mod process;
+pub mod process;
 mod sync;
 mod thread;
 

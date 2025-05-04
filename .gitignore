@@ -14,3 +14,5 @@ os/virt.out
 tools/
 pushall.sh
 .vscode/*.log
+
+**/.vscode/

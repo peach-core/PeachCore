@@ -23,7 +23,9 @@ mod board;
 mod console;
 mod config;
 mod drivers;
+mod fpu;
 mod fs;
+mod kpthread_test;
 mod lang_items;
 mod logging;
 mod mm;
@@ -34,6 +36,9 @@ mod syscall;
 mod task;
 mod timer;
 mod trap;
+
+pub use kpthread_test::__start;
+use trap::kpthread_trap_return;
 
 use crate::drivers::chardev::{
     CharDevice,
@@ -61,10 +66,26 @@ lazy_static! {
         unsafe { UPIntrFreeCell::new(false) };
 }
 
+fn debug_log() {
+    info!(
+        "kpthread_trap_return = {:#X}",
+        kpthread_trap_return as usize
+    );
+    info!(
+        "kpthread_test::__start = {:#X}",
+        kpthread_test::__start as usize
+    );
+    info!(
+        "kpthread_test::get_task1_user_stack_top() = {:#X}",
+        kpthread_test::get_task1_user_stack_top()
+    );
+}
+
 #[no_mangle]
 pub fn rust_main() -> ! {
     clear_bss();
     logging::init();
+    fpu::fpu_enable();
     mm::init();
     UART.init();
     info!("KERN: init gpu");
@@ -76,11 +97,13 @@ pub fn rust_main() -> ! {
     info!("KERN: init trap");
     trap::init();
     trap::enable_timer_interrupt();
-    timer::set_next_trigger();
     board::device_init();
     fs::list_apps();
+    // debug_log();
+    task::add_kpthread();
     task::add_initproc();
     *DEV_NON_BLOCKING_ACCESS.exclusive_access() = true;
+    timer::set_next_trigger();
     task::run_tasks();
     panic!("Unreachable in rust_main!");
 }

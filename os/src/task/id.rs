@@ -130,6 +130,7 @@ pub struct TaskUserRes {
     pub tid: usize,
     pub ustack_base: usize,
     pub process: Weak<ProcessControlBlock>,
+    pub is_kpthread: bool,
 }
 
 fn trap_cx_bottom_from_tid(tid: usize) -> usize {
@@ -149,10 +150,24 @@ impl TaskUserRes {
             tid,
             ustack_base,
             process: Arc::downgrade(&process),
+            is_kpthread: false,
         };
         if alloc_user_res {
             task_user_res.alloc_user_res();
         }
+        task_user_res
+    }
+
+    pub fn new_kpthread(
+        process: Arc<ProcessControlBlock>, ustack_base: usize, alloc_user_res: bool,
+    ) -> Self {
+        let tid = process.inner_exclusive_access().alloc_tid();
+        let task_user_res = Self {
+            tid,
+            ustack_base,
+            process: Arc::downgrade(&process),
+            is_kpthread: true,
+        };
         task_user_res
     }
 
@@ -228,13 +243,19 @@ impl TaskUserRes {
         self.ustack_base
     }
     pub fn ustack_top(&self) -> usize {
-        ustack_bottom_from_tid(self.ustack_base, self.tid) + USER_STACK_SIZE
+        if self.is_kpthread {
+            self.ustack_base
+        } else {
+            ustack_bottom_from_tid(self.ustack_base, self.tid) + USER_STACK_SIZE
+        }
     }
 }
 
 impl Drop for TaskUserRes {
     fn drop(&mut self) {
         self.dealloc_tid();
-        self.dealloc_user_res();
+        if !self.is_kpthread {
+            self.dealloc_user_res();
+        }
     }
 }

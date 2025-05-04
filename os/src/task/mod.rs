@@ -21,6 +21,7 @@ use alloc::{
     vec::Vec,
 };
 use lazy_static::*;
+use log::{log, trace};
 use manager::fetch_task;
 use process::ProcessControlBlock;
 use switch::__switch;
@@ -192,4 +193,20 @@ pub fn current_add_signal(signal: SignalFlags) {
     let process = current_process();
     let mut process_inner = process.inner_exclusive_access();
     process_inner.signals |= signal;
+}
+
+/*********************************************** */
+lazy_static! {
+    pub static ref KTHREAD_PROC: Arc<ProcessControlBlock> = {
+        ProcessControlBlock::new_kpthread(
+            crate::kpthread_test::__start as usize,
+            crate::kpthread_test::get_task1_user_stack_top(),
+        )
+    };
+}
+
+#[allow(unused)]
+pub fn add_kpthread() {
+    let kpthread = KTHREAD_PROC.clone();
+    trace!("kpthread pid: {}", kpthread.pid.0);
 }

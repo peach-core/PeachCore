@@ -4,24 +4,14 @@ use crate::{
     config::TRAMPOLINE,
     syscall::syscall,
     task::{
-        check_signals_of_current,
-        current_add_signal,
-        current_trap_cx,
-        current_trap_cx_user_va,
-        current_user_token,
-        exit_current_and_run_next,
-        suspend_current_and_run_next,
-        SignalFlags,
+        check_signals_of_current, current_add_signal, current_process, current_task, current_trap_cx, current_trap_cx_user_va, current_user_token, exit_current_and_run_next, suspend_current_and_run_next, SignalFlags
     },
     timer::{
         check_timer,
         set_next_trigger,
     },
 };
-use core::arch::{
-    asm,
-    global_asm,
-};
+use core::arch::asm;
 use riscv::register::{
     mtvec::TrapMode,
     scause::{
@@ -37,20 +27,18 @@ use riscv::register::{
     stvec,
 };
 
-global_asm!(include_str!("trap.S"));
-
 pub fn init() {
     set_kernel_trap_entry();
 }
 
 fn set_kernel_trap_entry() {
     extern "C" {
-        fn __alltraps();
-        fn __alltraps_k();
+        fn __traps_entry();
+        fn __traps_entry_k();
     }
-    let __alltraps_k_va = __alltraps_k as usize - __alltraps as usize + TRAMPOLINE;
+    let __traps_entry_k_va = __traps_entry_k as usize - __traps_entry as usize + TRAMPOLINE;
     unsafe {
-        stvec::write(__alltraps_k_va, TrapMode::Direct);
+        stvec::write(__traps_entry_k_va, TrapMode::Direct);
         sscratch::write(trap_from_kernel as usize);
     }
 }
@@ -58,6 +46,15 @@ fn set_kernel_trap_entry() {
 fn set_user_trap_entry() {
     unsafe {
         stvec::write(TRAMPOLINE as usize, TrapMode::Direct);
+    }
+}
+
+fn set_kpthread_trap_entry() {
+    unsafe {
+        extern "C" {
+            fn __kpthread_traps_entry();
+        }
+        stvec::write(__kpthread_traps_entry as usize, TrapMode::Direct);
     }
 }
 
@@ -149,10 +146,10 @@ pub fn trap_return() -> ! {
     let trap_cx_user_va = current_trap_cx_user_va();
     let user_satp = current_user_token();
     extern "C" {
-        fn __alltraps();
-        fn __restore();
+        fn __traps_entry();
+        fn __traps_restore();
     }
-    let restore_va = __restore as usize - __alltraps as usize + TRAMPOLINE;
+    let restore_va = __traps_restore as usize - __traps_entry as usize + TRAMPOLINE;
     //println!("before return");
     unsafe {
         asm!(
@@ -181,12 +178,62 @@ pub fn trap_from_kernel(_trap_cx: &TrapContext) {
         }
         _ => {
             panic!(
-                "Unsupported trap from kernel: {:?}, stval = {:#x}!",
+                "pid: {} Unsupported trap from kernel: {:?}, stval = {:#x}!",
+                current_process().getpid(),
                 scause.cause(),
                 stval
             );
         }
     }
+}
+
+
+/*********************************************************/
+/*                   for kernel pthread                  */
+/*********************************************************/
+
+/// kpthread will go here after interrupt.
+pub fn kpthread_trap_return(ctx: &mut TrapContext) -> ! {
+    set_kpthread_trap_entry();
+    extern "C" {
+        fn __kpthread_traps_restore();
+    }
+    let restore = __kpthread_traps_restore as usize;
+
+    unsafe {
+        asm!(
+            "jr {kernel_restore_va}",   // jump to new addr of __kernel_trap_restore asm function
+            kernel_restore_va = in(reg) restore,
+            in("a0") ctx,
+            options(noreturn),
+        );
+    }
+}
+
+/// Kernel thread interrupt. kernel_trap.S will call this function.
+#[no_mangle]
+pub fn kpthread_trap_handler(ctx: &mut TrapContext) -> ! {
+    let scause = scause::read(); // get trap cause
+    let stval = stval::read(); // get extra value
+    match scause.cause() {
+        Trap::Interrupt(Interrupt::SupervisorExternal) => {
+            crate::board::irq_handler();
+        }
+        Trap::Interrupt(Interrupt::SupervisorTimer) => {
+            set_next_trigger();
+            suspend_current_and_run_next();
+        }
+        _ => {
+            panic!(
+                "pid: {}, Unsupported trap {:?}, stval = {:#x}!",
+                current_process().getpid(),
+                scause.cause(),
+                stval
+            );
+        }
+    }
+
+    kpthread_trap_return(ctx)
 }
 
 pub use context::TrapContext;

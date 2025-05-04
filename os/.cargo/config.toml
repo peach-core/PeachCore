@@ -3,5 +3,12 @@ target = "riscv64gc-unknown-none-elf"
 
 [target.riscv64gc-unknown-none-elf]
 rustflags = [
-    "-Clink-arg=-Tsrc/linker.ld", "-Cforce-frame-pointers=yes"
+    "-C",
+    "link-arg=-Tsrc/linker.ld",
+    "-C",
+    "force-frame-pointers=yes",
+    "-C",
+    "link-arg=./target/riscv64gc-unknown-none-elf/release/trap/trap.o",          # 链接 trap.o
+    "-C",
+    "link-arg=./target/riscv64gc-unknown-none-elf/release/trap/kpthread_trap.o", # 链接 kpthread_trap.o
 ]

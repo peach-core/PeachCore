@@ -7,12 +7,13 @@ use riscv::register::sstatus::{
 #[repr(C)]
 #[derive(Debug)]
 pub struct TrapContext {
-    pub x: [usize; 32],
-    pub sstatus: Sstatus,
-    pub sepc: usize,
-    pub kernel_satp: usize,
-    pub kernel_sp: usize,
-    pub trap_handler: usize,
+    pub x: [usize; 32],      // reg[0..31].
+    pub sstatus: Sstatus,    // CSR sstatus reg.
+    pub sepc: usize,         // CSR sepc reg.
+    pub kernel_satp: usize,  // kernel kernel satp(page table entry).
+    pub kernel_sp: usize,    // kernel stack addr in kernel space.
+    pub trap_handler: usize, // virtual addr of trap_handler in kernel space.
+    pub fx: [usize; 32],     // FP register[0..31].
 }
 
 impl TrapContext {
@@ -20,7 +21,8 @@ impl TrapContext {
         self.x[2] = sp;
     }
     pub fn app_init_context(
-        entry: usize, sp: usize, kernel_satp: usize, kernel_sp: usize, trap_handler: usize,
+        entry_point: usize, user_sp: usize, kernel_satp: usize, kernel_sp: usize,
+        trap_handler: usize,
     ) -> Self {
         let mut sstatus = sstatus::read();
         // set CPU privilege to User after trapping back
@@ -28,12 +30,34 @@ impl TrapContext {
         let mut cx = Self {
             x: [0; 32],
             sstatus,
-            sepc: entry,
+            sepc: entry_point,
             kernel_satp,
             kernel_sp,
             trap_handler,
+            fx: [0; 32],
         };
-        cx.set_sp(sp);
+        cx.set_sp(user_sp);
+        cx
+    }
+
+    pub fn kpthread_init_context(
+        entry_point: usize, user_sp: usize, kernel_satp: usize, kernel_sp: usize,
+        trap_handler: usize,
+    ) -> Self {
+        let mut sstatus = sstatus::read();
+        // set CPU privilege to User after trapping back
+        sstatus.set_spp(SPP::Supervisor);
+        sstatus.set_spie(true);
+        let mut cx = Self {
+            x: [0; 32],
+            sstatus,
+            sepc: entry_point,
+            kernel_satp,
+            kernel_sp,
+            trap_handler,
+            fx: [0; 32],
+        };
+        cx.set_sp(user_sp);
         cx
     }
 }

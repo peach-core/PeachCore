@@ -159,6 +159,65 @@ impl ProcessControlBlock {
         process
     }
 
+    pub fn new_kpthread(kernel_thread_entry: usize, user_stack_upper_bound: usize) -> Arc<Self> {
+        // allocate a pid
+        let pid_handle = pid_alloc();
+        let ustack_base = user_stack_upper_bound;
+
+        let process = Arc::new(Self {
+            pid: pid_handle,
+            inner: unsafe {
+                UPIntrFreeCell::new(ProcessControlBlockInner {
+                    is_zombie: false,
+                    memory_set: MemorySet::new_bare(),
+                    parent: None,
+                    children: Vec::new(),
+                    exit_code: 0,
+                    fd_table: vec![
+                        // 0 -> stdin
+                        Some(Arc::new(Stdin)),
+                        // 1 -> stdout
+                        Some(Arc::new(Stdout)),
+                        // 2 -> stderr
+                        Some(Arc::new(Stdout)),
+                    ],
+                    signals: SignalFlags::empty(),
+                    tasks: Vec::new(),
+                    task_res_allocator: RecycleAllocator::new(),
+                    mutex_list: Vec::new(),
+                    semaphore_list: Vec::new(),
+                    condvar_list: Vec::new(),
+                })
+            },
+        });
+        // create a main thread, we should allocate ustack and trap_cx here
+        let task = Arc::new(TaskControlBlock::new_kpthread(
+            Arc::clone(&process),
+            ustack_base,
+            true,
+        ));
+        // prepare trap_cx of main thread
+        let task_inner = task.inner_exclusive_access();
+        let ustack_top = task_inner.res.as_ref().unwrap().ustack_top();
+        let kstack_top = task.kstack.get_top();
+        drop(task_inner);
+        task.kstack.push_on_top(TrapContext::kpthread_init_context(
+            kernel_thread_entry,
+            ustack_top,
+            KERNEL_SPACE.exclusive_access().token(),
+            kstack_top,
+            trap_handler as usize,
+        ));
+        // add main thread to the process
+        let mut process_inner = process.inner_exclusive_access();
+        process_inner.tasks.push(Some(Arc::clone(&task)));
+        drop(process_inner);
+        insert_into_pid2process(process.getpid(), Arc::clone(&process));
+        // add main thread to scheduler
+        add_task(task);
+        process
+    }
+
     /// Only support processes with a single thread.
     pub fn exec(self: &Arc<Self>, elf_data: &[u8], args: Vec<String>) {
         assert_eq!(self.inner_exclusive_access().thread_count(), 1);

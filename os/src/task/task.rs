@@ -1,3 +1,5 @@
+use core::mem::size_of;
+
 use super::{
     id::TaskUserRes,
     kstack_alloc,
@@ -17,6 +19,7 @@ use alloc::sync::{
     Arc,
     Weak,
 };
+use riscv::register::mcause::Trap;
 
 pub struct TaskControlBlock {
     // immutable
@@ -73,6 +76,28 @@ impl TaskControlBlock {
                     res: Some(res),
                     trap_cx_ppn,
                     task_cx: TaskContext::goto_trap_return(kstack_top),
+                    task_status: TaskStatus::Ready,
+                    exit_code: None,
+                })
+            },
+        }
+    }
+
+    pub fn new_kpthread(
+        process: Arc<ProcessControlBlock>, ustack_base: usize, alloc_user_res: bool,
+    ) -> Self {
+        let res = TaskUserRes::new_kpthread(Arc::clone(&process), ustack_base, alloc_user_res);
+        let kstack = kstack_alloc();
+        let kstack_top = kstack.get_top();
+        Self {
+            process: Arc::downgrade(&process),
+            kstack,
+            inner: unsafe {
+                UPIntrFreeCell::new(TaskControlBlockInner {
+                    res: Some(res),
+                    trap_cx_ppn: 0.into(),
+                    // save TrapContext in the top of kernel stack.
+                    task_cx: TaskContext::goto_kpthread_trap_return(kstack_top - size_of::<TrapContext>()),
                     task_status: TaskStatus::Ready,
                     exit_code: None,
                 })

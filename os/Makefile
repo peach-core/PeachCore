@@ -7,6 +7,16 @@ DISASM_TMP := target/$(TARGET)/$(MODE)/asm
 FS_IMG := ../user/target/$(TARGET)/$(MODE)/fs.img
 APPS := ../user/src/bin/*
 
+CC := riscv64-unknown-elf-gcc
+CXX := riscv64-unknown-elf-g++
+DEBUG_FLAG := -g
+
+OS_ROOT := .
+OS_SRC_DIR := $(OS_ROOT)/src
+OS_ASM_SRCS := $(wildcard $(OS_SRC_DIR)/*/*.S $(OS_SRC_DIR)/*.S)
+OS_OBJ_DIR := $(OS_ROOT)/target/riscv64gc-unknown-none-elf/release
+OS_ASM_OBJS := $(patsubst $(OS_SRC_DIR)/%.S, $(OS_OBJ_DIR)/%.o, $(OS_ASM_SRCS))
+
 # BOARD
 BOARD := qemu
 SBI ?= rustsbi
@@ -38,23 +48,35 @@ TEST ?=
 
 build: env $(KERNEL_BIN) fs-img 
 
+build-asm: $(OS_ASM_SRCS)
+
+# compiler all assembly file.
+$(OS_OBJ_DIR)/%.o: $(OS_SRC_DIR)/%.S
+	@$(shell mkdir --parents $(dir $@))
+	$(CC) $^ -c -o $@ $(DEBUG_FLAG)
+
+# check env
 env:
 	(rustup target list | grep "riscv64gc-unknown-none-elf (installed)") || rustup target add $(TARGET)
 	cargo install cargo-binutils
 	rustup component add rust-src
 	rustup component add llvm-tools-preview
 
-$(KERNEL_BIN): kernel
+# Crop kernel.elf to binary file.
+$(KERNEL_BIN): kernel 
 	@$(OBJCOPY) $(KERNEL_ELF) --strip-all -O binary $@
 
+# generator fs-img.
 fs-img: $(APPS)
 	@cd ../user && make build TEST=$(TEST)
 	@rm -f $(FS_IMG)
 	@cd ../easy-fs-fuse && cargo run --release -- -s ../user/src/bin/ -t ../user/target/riscv64gc-unknown-none-elf/release/
 
+# if some app was need, add here.
 $(APPS):
 
-kernel:
+# build kernel.elf
+kernel: $(OS_OBJ_DIR)/trap/trap.o $(OS_OBJ_DIR)/trap/kpthread_trap.o
 	@echo Platform: $(BOARD)
 	@cp src/linker-$(BOARD).ld src/linker.ld
 	@cargo build --release
@@ -98,10 +120,7 @@ run-inner: qemu-version-check build
 	@qemu-system-riscv64 $(QEMU_ARGS)
 
 debug: qemu-version-check build
-	@tmux new-session -d \
-		"qemu-system-riscv64 $(QEMU_ARGS) -s -S" && \
-		tmux split-window -h "riscv64-unknown-elf-gdb -ex 'file $(KERNEL_ELF)' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'" && \
-		tmux -2 attach-session -d
+	qemu-system-riscv64 $(QEMU_ARGS) -s -S
 
 gdbserver: qemu-version-check build
 	@qemu-system-riscv64 $(QEMU_ARGS) -s -S
@@ -109,4 +128,4 @@ gdbserver: qemu-version-check build
 gdbclient:
 	@riscv64-unknown-elf-gdb -ex 'file $(KERNEL_ELF)' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'
 
-.PHONY: build env kernel clean disasm disasm-vim run-inner fs-img gdbserver gdbclient fdt qemu-version-check
+.PHONY: build env kernel clean disasm disasm-vim run-inner fs-img gdbserver gdbclient fdt qemu-version-check $(OS_OBJ_DIR)/%.o

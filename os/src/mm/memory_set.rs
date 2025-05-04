@@ -13,10 +13,15 @@ use super::{
 };
 use crate::{
     config::{
+        KERNEL_THREAD_USER_STACK_BOTTOM,
+        KERNEL_THREAD_USER_STACK_TOP,
         MEMORY_END,
         MMIO,
         PAGE_SIZE,
         TRAMPOLINE,
+        TRAP_CONTEXT_BASE,
+        USER_STACK_BOTTOM,
+        USER_STACK_TOP,
     },
     sync::UPIntrFreeCell,
 };
@@ -218,15 +223,70 @@ impl MemorySet {
                 );
             }
         }
-        let max_end_va: VirtAddr = max_end_vpn.into();
-        let mut user_stack_base: usize = max_end_va.into();
-        user_stack_base += PAGE_SIZE;
+        let max_end_vaddr: VirtAddr = max_end_vpn.into();
+        let mut program_brk: VirtAddr = (max_end_vaddr.0 + PAGE_SIZE).into();
+
+        // program brk segment.
+        memory_set.push(
+            MapArea::new(
+                program_brk,
+                program_brk,
+                MapType::Framed,
+                MapPermission::R | MapPermission::W | MapPermission::U,
+            ),
+            None,
+        );
+
+        // map user stack
+        let user_stack_top = USER_STACK_TOP;
+        let user_stack_bottom = USER_STACK_BOTTOM;
+        memory_set.push(
+            MapArea::new(
+                user_stack_bottom.into(),
+                user_stack_top.into(),
+                MapType::Framed,
+                MapPermission::U | MapPermission::R | MapPermission::W,
+            ),
+            None,
+        );
+
         (
             memory_set,
-            user_stack_base,
+            user_stack_top.into(),
             elf.header.pt2.entry_point() as usize,
         )
     }
+
+    /// Input: entry address of kernel thread.
+    /// Output: (kernel thread memory_set, kernel_user_stack_top).
+    ///         This memory_set information include:
+    ///             1. Kernel segments direct map.
+    ///             2. map_trampoline
+    ///             3. user stack.
+    /// Note: in this way, kernel thread CAN NOD manage all physical memory, which means kernel
+    /// thread CAN NOT be used as memory manager.
+    pub fn from_kernel_thread() -> (Self, usize) {
+        let mut memory_set = Self::new_kernel();
+
+        // map user stack
+        let kernel_thread_user_stack_top = KERNEL_THREAD_USER_STACK_TOP;
+        let kernel_thread_user_stack_bottom = KERNEL_THREAD_USER_STACK_BOTTOM;
+        memory_set.push(
+            MapArea::new(
+                kernel_thread_user_stack_bottom.into(),
+                kernel_thread_user_stack_top.into(),
+                MapType::Framed,
+                MapPermission::R | MapPermission::W,
+            ),
+            None,
+        );
+
+        let program_brk_vaddr: VirtAddr = (ekernel as usize + PAGE_SIZE).into();
+        let program_brk: VirtAddr = program_brk_vaddr.ceil().into();
+
+        (memory_set, kernel_thread_user_stack_top.into())
+    }
+
     pub fn from_existed_user(user_space: &MemorySet) -> MemorySet {
         let mut memory_set = Self::new_bare();
         // map trampoline

@@ -1,8 +1,16 @@
 #[allow(unused)]
+pub const TASK_STACK_SIZE: usize = 1024 * 8; // max stack size for task
+pub const TASK_HEAP_SIZE: usize = 1024 * 8; // max heap size for task
+pub const KERNEL_STACK_SIZE: usize = 1024 * 8; // max stack size for kernel
+pub const KERNEL_HEAP_SIZE: usize = 4096 * 512; // max heap size for kernel
+
+pub const KERNEL_THREAD_USER_STACK_TOP: usize = 0x0003_ffff_f000;
+pub const KERNEL_THREAD_USER_STACK_BOTTOM: usize = KERNEL_THREAD_USER_STACK_TOP - TASK_STACK_SIZE;
+
+pub const USER_STACK_TOP: usize = 0x0003_ffff_f000;
+pub const USER_STACK_BOTTOM: usize = USER_STACK_TOP - TASK_STACK_SIZE;
 
 pub const USER_STACK_SIZE: usize = 4096 * 2;
-pub const KERNEL_STACK_SIZE: usize = 4096 * 2;
-pub const KERNEL_HEAP_SIZE: usize = 0x100_0000;
 pub const PAGE_SIZE: usize = 0x1000;
 pub const PAGE_SIZE_BITS: usize = 0xc;
 
