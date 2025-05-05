@@ -21,7 +21,7 @@ use alloc::{
     vec::Vec,
 };
 use lazy_static::*;
-use log::{log, trace};
+use log::trace;
 use manager::fetch_task;
 use process::ProcessControlBlock;
 use switch::__switch;

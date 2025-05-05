@@ -66,6 +66,7 @@ lazy_static! {
         unsafe { UPIntrFreeCell::new(false) };
 }
 
+#[allow(dead_code)]
 fn debug_log() {
     info!(
         "kpthread_trap_return = {:#X}",

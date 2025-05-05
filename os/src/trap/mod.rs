@@ -4,7 +4,7 @@ use crate::{
     config::TRAMPOLINE,
     syscall::syscall,
     task::{
-        check_signals_of_current, current_add_signal, current_process, current_task, current_trap_ctx, current_trap_ctx_user_va, current_user_token, exit_current_and_run_next, suspend_current_and_run_next, SignalFlags
+        check_signals_of_current, current_add_signal, current_process, current_trap_ctx, current_trap_ctx_user_va, current_user_token, exit_current_and_run_next, suspend_current_and_run_next, SignalFlags
     },
     timer::{
         check_timer,

@@ -196,7 +196,6 @@ impl ProcessControlBlock {
         let task = Arc::new(TaskControlBlock::new_kpthread(
             Arc::clone(&process),
             ustack_base,
-            true,
         ));
         // prepare trap_ctx of main thread
         let task_inner = task.inner_exclusive_access();

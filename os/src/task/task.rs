@@ -19,7 +19,6 @@ use alloc::sync::{
     Arc,
     Weak,
 };
-use riscv::register::mcause::Trap;
 
 pub struct TaskControlBlock {
     // immutable
@@ -84,9 +83,9 @@ impl TaskControlBlock {
     }
 
     pub fn new_kpthread(
-        process: Arc<ProcessControlBlock>, ustack_base: usize, alloc_user_res: bool,
+        process: Arc<ProcessControlBlock>, ustack_base: usize,
     ) -> Self {
-        let res = TaskUserRes::new_kpthread(Arc::clone(&process), ustack_base, alloc_user_res);
+        let res = TaskUserRes::new_kpthread(Arc::clone(&process), ustack_base);
         let kstack = kstack_alloc();
         let kstack_top = kstack.get_top();
         Self {

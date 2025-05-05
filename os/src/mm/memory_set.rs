@@ -19,7 +19,6 @@ use crate::{
         MMIO,
         PAGE_SIZE,
         TRAMPOLINE,
-        TRAP_CONTEXT_BASE,
         USER_STACK_BOTTOM,
         USER_STACK_TOP,
     },
@@ -224,7 +223,7 @@ impl MemorySet {
             }
         }
         let max_end_vaddr: VirtAddr = max_end_vpn.into();
-        let mut program_brk: VirtAddr = (max_end_vaddr.0 + PAGE_SIZE).into();
+        let program_brk: VirtAddr = (max_end_vaddr.0 + PAGE_SIZE).into();
 
         // program brk segment.
         memory_set.push(
@@ -265,6 +264,8 @@ impl MemorySet {
     ///             3. user stack.
     /// Note: in this way, kernel thread CAN NOD manage all physical memory, which means kernel
     /// thread CAN NOT be used as memory manager.
+    #[allow(dead_code)]
+    /// kernel thread do not need private page table.
     pub fn from_kernel_thread() -> (Self, usize) {
         let mut memory_set = Self::new_kernel();
 
@@ -282,7 +283,7 @@ impl MemorySet {
         );
 
         let program_brk_vaddr: VirtAddr = (ekernel as usize + PAGE_SIZE).into();
-        let program_brk: VirtAddr = program_brk_vaddr.ceil().into();
+        let _program_brk: VirtAddr = program_brk_vaddr.ceil().into();
 
         (memory_set, kernel_thread_user_stack_top.into())
     }

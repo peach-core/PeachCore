@@ -1,4 +1,4 @@
-#[allow(unused)]
+#![allow(unused)]
 pub const TASK_STACK_SIZE: usize = 1024 * 8; // max stack size for task
 pub const TASK_HEAP_SIZE: usize = 1024 * 8; // max heap size for task
 pub const KERNEL_STACK_SIZE: usize = 1024 * 8; // max stack size for kernel
