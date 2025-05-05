@@ -43,15 +43,15 @@ impl TaskControlBlock {
 
 pub struct TaskControlBlockInner {
     pub res: Option<TaskUserRes>,
-    pub trap_cx_ppn: PhysPageNum,
-    pub task_cx: TaskContext,
+    pub trap_ctx_ppn: PhysPageNum,
+    pub task_ctx: TaskContext,
     pub task_status: TaskStatus,
     pub exit_code: Option<i32>,
 }
 
 impl TaskControlBlockInner {
-    pub fn get_trap_cx(&self) -> &'static mut TrapContext {
-        self.trap_cx_ppn.get_mut()
+    pub fn get_trap_ctx(&self) -> &'static mut TrapContext {
+        self.trap_ctx_ppn.get_mut()
     }
 
     #[allow(unused)]
@@ -65,7 +65,7 @@ impl TaskControlBlock {
         process: Arc<ProcessControlBlock>, ustack_base: usize, alloc_user_res: bool,
     ) -> Self {
         let res = TaskUserRes::new(Arc::clone(&process), ustack_base, alloc_user_res);
-        let trap_cx_ppn = res.trap_cx_ppn();
+        let trap_ctx_ppn = res.trap_ctx_ppn();
         let kstack = kstack_alloc();
         let kstack_top = kstack.get_top();
         Self {
@@ -74,8 +74,8 @@ impl TaskControlBlock {
             inner: unsafe {
                 UPIntrFreeCell::new(TaskControlBlockInner {
                     res: Some(res),
-                    trap_cx_ppn,
-                    task_cx: TaskContext::goto_trap_return(kstack_top),
+                    trap_ctx_ppn,
+                    task_ctx: TaskContext::goto_trap_return(kstack_top),
                     task_status: TaskStatus::Ready,
                     exit_code: None,
                 })
@@ -95,9 +95,9 @@ impl TaskControlBlock {
             inner: unsafe {
                 UPIntrFreeCell::new(TaskControlBlockInner {
                     res: Some(res),
-                    trap_cx_ppn: 0.into(),
+                    trap_ctx_ppn: 0.into(),
                     // save TrapContext in the top of kernel stack.
-                    task_cx: TaskContext::goto_kpthread_trap_return(kstack_top - size_of::<TrapContext>()),
+                    task_ctx: TaskContext::goto_kpthread_trap_return(kstack_top - size_of::<TrapContext>()),
                     task_status: TaskStatus::Ready,
                     exit_code: None,
                 })

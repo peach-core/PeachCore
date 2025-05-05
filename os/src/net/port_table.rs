@@ -108,7 +108,7 @@ pub fn accept_connection(_port: u16, tcp_packet: &TCPPacket, task: Arc<TaskContr
 
     inner.fd_table[fd] = Some(Arc::new(tcp_socket));
 
-    let cx = task.inner_exclusive_access().get_trap_cx();
+    let cx = task.inner_exclusive_access().get_trap_ctx();
     cx.x[10] = fd;
 }
 

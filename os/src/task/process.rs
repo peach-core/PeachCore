@@ -48,18 +48,20 @@ pub struct ProcessControlBlock {
 }
 
 pub struct ProcessControlBlockInner {
-    pub is_zombie: bool,
-    pub memory_set: MemorySet,
-    pub parent: Option<Weak<ProcessControlBlock>>,
-    pub children: Vec<Arc<ProcessControlBlock>>,
-    pub exit_code: i32,
-    pub fd_table: Vec<Option<Arc<dyn File + Send + Sync>>>,
-    pub signals: SignalFlags,
-    pub tasks: Vec<Option<Arc<TaskControlBlock>>>,
-    pub task_res_allocator: RecycleAllocator,
-    pub mutex_list: Vec<Option<Arc<dyn Mutex>>>,
-    pub semaphore_list: Vec<Option<Arc<Semaphore>>>,
-    pub condvar_list: Vec<Option<Arc<Condvar>>>,
+    pub is_zombie: bool,                                    // is_zombie process
+    pub memory_set: MemorySet,                              // memory space
+    pub parent: Option<Weak<ProcessControlBlock>>,          // parent process
+    pub children: Vec<Arc<ProcessControlBlock>>,            // children processes array
+    pub exit_code: i32,                                     // exit code
+    pub fd_table: Vec<Option<Arc<dyn File + Send + Sync>>>, // file description
+    pub signals: SignalFlags,                               // signals
+    pub tasks: Vec<Option<Arc<TaskControlBlock>>>,          // threads in this process group
+    pub task_res_allocator: RecycleAllocator,               /* thread allocator: use tid to
+                                                             * alloc shared resources in thread
+                                                             * group */
+    pub mutex_list: Vec<Option<Arc<dyn Mutex>>>,            
+    pub semaphore_list: Vec<Option<Arc<Semaphore>>>,        
+    pub condvar_list: Vec<Option<Arc<Condvar>>>,    
 }
 
 impl ProcessControlBlockInner {
@@ -130,19 +132,19 @@ impl ProcessControlBlock {
                 })
             },
         });
-        // create a main thread, we should allocate ustack and trap_cx here
+        // create a main thread, we should allocate ustack and trap_ctx here
         let task = Arc::new(TaskControlBlock::new(
             Arc::clone(&process),
             ustack_base,
             true,
         ));
-        // prepare trap_cx of main thread
+        // prepare trap_ctx of main thread
         let task_inner = task.inner_exclusive_access();
-        let trap_cx = task_inner.get_trap_cx();
+        let trap_ctx = task_inner.get_trap_ctx();
         let ustack_top = task_inner.res.as_ref().unwrap().ustack_top();
         let kstack_top = task.kstack.get_top();
         drop(task_inner);
-        *trap_cx = TrapContext::app_init_context(
+        *trap_ctx = TrapContext::app_init_context(
             entry_point,
             ustack_top,
             KERNEL_SPACE.exclusive_access().token(),
@@ -190,13 +192,13 @@ impl ProcessControlBlock {
                 })
             },
         });
-        // create a main thread, we should allocate ustack and trap_cx here
+        // create a main thread, we should allocate ustack and trap_ctx here
         let task = Arc::new(TaskControlBlock::new_kpthread(
             Arc::clone(&process),
             ustack_base,
             true,
         ));
-        // prepare trap_cx of main thread
+        // prepare trap_ctx of main thread
         let task_inner = task.inner_exclusive_access();
         let ustack_top = task_inner.res.as_ref().unwrap().ustack_top();
         let kstack_top = task.kstack.get_top();
@@ -232,7 +234,7 @@ impl ProcessControlBlock {
         let mut task_inner = task.inner_exclusive_access();
         task_inner.res.as_mut().unwrap().ustack_base = ustack_base;
         task_inner.res.as_mut().unwrap().alloc_user_res();
-        task_inner.trap_cx_ppn = task_inner.res.as_mut().unwrap().trap_cx_ppn();
+        task_inner.trap_ctx_ppn = task_inner.res.as_mut().unwrap().trap_ctx_ppn();
         // push arguments on user stack
         let mut user_sp = task_inner.res.as_mut().unwrap().ustack_top();
         user_sp -= (args.len() + 1) * core::mem::size_of::<usize>();
@@ -258,24 +260,24 @@ impl ProcessControlBlock {
         }
         // make the user_sp aligned to 8B for k210 platform
         user_sp -= user_sp % core::mem::size_of::<usize>();
-        // initialize trap_cx
-        let mut trap_cx = TrapContext::app_init_context(
+        // initialize trap_ctx
+        let mut trap_ctx = TrapContext::app_init_context(
             entry_point,
             user_sp,
             KERNEL_SPACE.exclusive_access().token(),
             task.kstack.get_top(),
             trap_handler as usize,
         );
-        trap_cx.x[10] = args.len();
-        trap_cx.x[11] = argv_base;
-        *task_inner.get_trap_cx() = trap_cx;
+        trap_ctx.x[10] = args.len();
+        trap_ctx.x[11] = argv_base;
+        *task_inner.get_trap_ctx() = trap_ctx;
     }
 
     /// Only support processes with a single thread.
     pub fn fork(self: &Arc<Self>) -> Arc<Self> {
         let mut parent = self.inner_exclusive_access();
         assert_eq!(parent.thread_count(), 1);
-        // clone parent's memory_set completely including trampoline/ustacks/trap_cxs
+        // clone parent's memory_set completely including trampoline/ustacks/trap_ctxs
         let memory_set = MemorySet::from_existed_user(&parent.memory_set);
         // alloc a pid
         let pid = pid_alloc();
@@ -320,7 +322,7 @@ impl ProcessControlBlock {
                 .as_ref()
                 .unwrap()
                 .ustack_base(),
-            // here we do not allocate trap_cx or ustack again
+            // here we do not allocate trap_ctx or ustack again
             // but mention that we allocate a new kstack here
             false,
         ));
@@ -328,10 +330,10 @@ impl ProcessControlBlock {
         let mut child_inner = child.inner_exclusive_access();
         child_inner.tasks.push(Some(Arc::clone(&task)));
         drop(child_inner);
-        // modify kstack_top in trap_cx of this thread
+        // modify kstack_top in trap_ctx of this thread
         let task_inner = task.inner_exclusive_access();
-        let trap_cx = task_inner.get_trap_cx();
-        trap_cx.kernel_sp = task.kstack.get_top();
+        let trap_ctx = task_inner.get_trap_ctx();
+        trap_ctx.kernel_sp = task.kstack.get_top();
         drop(task_inner);
         insert_into_pid2process(child.getpid(), Arc::clone(&child));
         // add this thread to scheduler

@@ -4,7 +4,7 @@ use crate::{
     config::TRAMPOLINE,
     syscall::syscall,
     task::{
-        check_signals_of_current, current_add_signal, current_process, current_task, current_trap_cx, current_trap_cx_user_va, current_user_token, exit_current_and_run_next, suspend_current_and_run_next, SignalFlags
+        check_signals_of_current, current_add_signal, current_process, current_task, current_trap_ctx, current_trap_ctx_user_va, current_user_token, exit_current_and_run_next, suspend_current_and_run_next, SignalFlags
     },
     timer::{
         check_timer,
@@ -85,7 +85,7 @@ pub fn trap_handler() -> ! {
     match scause.cause() {
         Trap::Exception(Exception::UserEnvCall) => {
             // jump to next instruction anyway
-            let mut cx = current_trap_cx();
+            let mut cx = current_trap_ctx();
             cx.sepc += 4;
 
             enable_supervisor_interrupt();
@@ -93,7 +93,7 @@ pub fn trap_handler() -> ! {
             // get system call return value
             let result = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]);
             // cx is changed during sys_exec, so we have to call it again
-            cx = current_trap_cx();
+            cx = current_trap_ctx();
             cx.x[10] = result as usize;
         }
         Trap::Exception(Exception::StoreFault)
@@ -107,7 +107,7 @@ pub fn trap_handler() -> ! {
                 "[kernel] {:?} in application, bad addr = {:#x}, bad instruction = {:#x}, kernel killed it.",
                 scause.cause(),
                 stval,
-                current_trap_cx().sepc,
+                current_trap_ctx().sepc,
             );
             */
             current_add_signal(SignalFlags::SIGSEGV);
@@ -143,7 +143,7 @@ pub fn trap_handler() -> ! {
 pub fn trap_return() -> ! {
     disable_supervisor_interrupt();
     set_user_trap_entry();
-    let trap_cx_user_va = current_trap_cx_user_va();
+    let trap_ctx_user_va = current_trap_ctx_user_va();
     let user_satp = current_user_token();
     extern "C" {
         fn __traps_entry();
@@ -156,7 +156,7 @@ pub fn trap_return() -> ! {
             "fence.i",
             "jr {restore_va}",
             restore_va = in(reg) restore_va,
-            in("a0") trap_cx_user_va,
+            in("a0") trap_ctx_user_va,
             in("a1") user_satp,
             options(noreturn)
         );
@@ -164,7 +164,7 @@ pub fn trap_return() -> ! {
 }
 
 #[no_mangle]
-pub fn trap_from_kernel(_trap_cx: &TrapContext) {
+pub fn trap_from_kernel(_trap_ctx: &TrapContext) {
     let scause = scause::read();
     let stval = stval::read();
     match scause.cause() {

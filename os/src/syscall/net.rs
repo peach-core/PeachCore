@@ -13,7 +13,7 @@ use crate::{
     task::{
         current_process,
         current_task,
-        current_trap_cx,
+        current_trap_ctx,
     },
 };
 use alloc::sync::Arc;
@@ -62,6 +62,6 @@ pub fn sys_accept(port_index: usize) -> isize {
         }
     }
 
-    let cx = current_trap_cx();
+    let cx = current_trap_ctx();
     cx.x[10] as isize
 }

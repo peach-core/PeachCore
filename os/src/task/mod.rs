@@ -44,8 +44,8 @@ pub use processor::{
     current_kstack_top,
     current_process,
     current_task,
-    current_trap_cx,
-    current_trap_cx_user_va,
+    current_trap_ctx,
+    current_trap_ctx_user_va,
     current_user_token,
     run_tasks,
     schedule,
@@ -63,7 +63,7 @@ pub fn suspend_current_and_run_next() {
 
     // ---- access current TCB exclusively
     let mut task_inner = task.inner_exclusive_access();
-    let task_cx_ptr = &mut task_inner.task_cx as *mut TaskContext;
+    let task_ctx_ptr = &mut task_inner.task_ctx as *mut TaskContext;
     // Change status to Ready
     task_inner.task_status = TaskStatus::Ready;
     drop(task_inner);
@@ -72,7 +72,7 @@ pub fn suspend_current_and_run_next() {
     // push back to ready queue.
     add_task(task);
     // jump to scheduling cycle
-    schedule(task_cx_ptr);
+    schedule(task_ctx_ptr);
 }
 
 /// This function must be followed by a schedule
@@ -80,12 +80,12 @@ pub fn block_current_task() -> *mut TaskContext {
     let task = take_current_task().unwrap();
     let mut task_inner = task.inner_exclusive_access();
     task_inner.task_status = TaskStatus::Blocked;
-    &mut task_inner.task_cx as *mut TaskContext
+    &mut task_inner.task_ctx as *mut TaskContext
 }
 
 pub fn block_current_and_run_next() {
-    let task_cx_ptr = block_current_task();
-    schedule(task_cx_ptr);
+    let task_ctx_ptr = block_current_task();
+    schedule(task_ctx_ptr);
 }
 
 /// Exit the current 'Running' task and run the next task in task list.
@@ -134,7 +134,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
             }
         }
 
-        // deallocate user res (including tid/trap_cx/ustack) of all threads
+        // deallocate user res (including tid/trap_ctx/ustack) of all threads
         // it has to be done before we dealloc the whole memory_set
         // otherwise they will be deallocated twice
         let mut recycle_res = Vec::<TaskUserRes>::new();

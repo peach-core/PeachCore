@@ -170,9 +170,9 @@ impl<const BASE_ADDR: usize> CharDevice for NS16550a<BASE_ADDR> {
             if let Some(ch) = inner.read_buffer.pop_front() {
                 return ch;
             } else {
-                let task_cx_ptr = self.condvar.wait_no_sched();
+                let task_ctx_ptr = self.condvar.wait_no_sched();
                 drop(inner);
-                schedule(task_cx_ptr);
+                schedule(task_ctx_ptr);
             }
         }
     }

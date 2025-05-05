@@ -126,6 +126,8 @@ impl KernelStack {
     }
 }
 
+/// Resources related with tid, in user memory space. RAII alloc and dealloc these resources.
+/// include: tid (alloced by process), user_stack, trap_ctx.
 pub struct TaskUserRes {
     pub tid: usize,
     pub ustack_base: usize,
@@ -133,7 +135,7 @@ pub struct TaskUserRes {
     pub is_kpthread: bool,
 }
 
-fn trap_cx_bottom_from_tid(tid: usize) -> usize {
+fn trap_ctx_bottom_from_tid(tid: usize) -> usize {
     TRAP_CONTEXT_BASE - tid * PAGE_SIZE
 }
 
@@ -182,12 +184,12 @@ impl TaskUserRes {
             ustack_top.into(),
             MapPermission::R | MapPermission::W | MapPermission::U,
         );
-        // alloc trap_cx
-        let trap_cx_bottom = trap_cx_bottom_from_tid(self.tid);
-        let trap_cx_top = trap_cx_bottom + PAGE_SIZE;
+        // alloc trap_ctx
+        let trap_ctx_bottom = trap_ctx_bottom_from_tid(self.tid);
+        let trap_ctx_top = trap_ctx_bottom + PAGE_SIZE;
         process_inner.memory_set.insert_framed_area(
-            trap_cx_bottom.into(),
-            trap_cx_top.into(),
+            trap_ctx_bottom.into(),
+            trap_ctx_top.into(),
             MapPermission::R | MapPermission::W,
         );
     }
@@ -201,11 +203,11 @@ impl TaskUserRes {
         process_inner
             .memory_set
             .remove_area_with_start_vpn(ustack_bottom_va.into());
-        // dealloc trap_cx manually
-        let trap_cx_bottom_va: VirtAddr = trap_cx_bottom_from_tid(self.tid).into();
+        // dealloc trap_ctx manually
+        let trap_ctx_bottom_va: VirtAddr = trap_ctx_bottom_from_tid(self.tid).into();
         process_inner
             .memory_set
-            .remove_area_with_start_vpn(trap_cx_bottom_va.into());
+            .remove_area_with_start_vpn(trap_ctx_bottom_va.into());
     }
 
     #[allow(unused)]
@@ -224,17 +226,17 @@ impl TaskUserRes {
         process_inner.dealloc_tid(self.tid);
     }
 
-    pub fn trap_cx_user_va(&self) -> usize {
-        trap_cx_bottom_from_tid(self.tid)
+    pub fn trap_ctx_user_va(&self) -> usize {
+        trap_ctx_bottom_from_tid(self.tid)
     }
 
-    pub fn trap_cx_ppn(&self) -> PhysPageNum {
+    pub fn trap_ctx_ppn(&self) -> PhysPageNum {
         let process = self.process.upgrade().unwrap();
         let process_inner = process.inner_exclusive_access();
-        let trap_cx_bottom_va: VirtAddr = trap_cx_bottom_from_tid(self.tid).into();
+        let trap_ctx_bottom_va: VirtAddr = trap_ctx_bottom_from_tid(self.tid).into();
         process_inner
             .memory_set
-            .translate(trap_cx_bottom_va.into())
+            .translate(trap_ctx_bottom_va.into())
             .unwrap()
             .ppn()
     }

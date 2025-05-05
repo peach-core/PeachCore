@@ -29,11 +29,11 @@ impl BlockDevice for VirtIOBlock {
         let nb = *DEV_NON_BLOCKING_ACCESS.exclusive_access();
         if nb {
             let mut resp = BlkResp::default();
-            let task_cx_ptr = self.virtio_blk.exclusive_session(|blk| {
+            let task_ctx_ptr = self.virtio_blk.exclusive_session(|blk| {
                 let token = unsafe { blk.read_block_nb(block_id, buf, &mut resp).unwrap() };
                 self.condvars.get(&token).unwrap().wait_no_sched()
             });
-            schedule(task_cx_ptr);
+            schedule(task_ctx_ptr);
             assert_eq!(
                 resp.status(),
                 RespStatus::Ok,
@@ -50,11 +50,11 @@ impl BlockDevice for VirtIOBlock {
         let nb = *DEV_NON_BLOCKING_ACCESS.exclusive_access();
         if nb {
             let mut resp = BlkResp::default();
-            let task_cx_ptr = self.virtio_blk.exclusive_session(|blk| {
+            let task_ctx_ptr = self.virtio_blk.exclusive_session(|blk| {
                 let token = unsafe { blk.write_block_nb(block_id, buf, &mut resp).unwrap() };
                 self.condvars.get(&token).unwrap().wait_no_sched()
             });
-            schedule(task_cx_ptr);
+            schedule(task_ctx_ptr);
             assert_eq!(
                 resp.status(),
                 RespStatus::Ok,

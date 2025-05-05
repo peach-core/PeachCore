@@ -12,8 +12,9 @@ bitflags = "1.2.1"
 riscv = { git = "https://github.com/rcore-os/riscv", features = ["inline-asm"] }
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 embedded-graphics = "0.7.1"
-oorandom ="11"
+oorandom = "11"
 virtio-input-decoder = "0.1.4"
+syscall_nr = { path = "../syscall_nr" }
 
 [profile.release]
 debug = true

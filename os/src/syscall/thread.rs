@@ -37,15 +37,15 @@ pub fn sys_thread_create(entry: usize, arg: usize) -> isize {
         tasks.push(None);
     }
     tasks[new_task_tid] = Some(Arc::clone(&new_task));
-    let new_task_trap_cx = new_task_inner.get_trap_cx();
-    *new_task_trap_cx = TrapContext::app_init_context(
+    let new_task_trap_ctx = new_task_inner.get_trap_ctx();
+    *new_task_trap_ctx = TrapContext::app_init_context(
         entry,
         new_task_res.ustack_top(),
         kernel_token(),
         new_task.kstack.get_top(),
         trap_handler as usize,
     );
-    (*new_task_trap_cx).x[10] = arg;
+    (*new_task_trap_ctx).x[10] = arg;
     new_task_tid as isize
 }
 

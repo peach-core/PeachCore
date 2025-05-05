@@ -66,9 +66,9 @@ impl InputDevice for VirtIOInputWrapper {
             if let Some(event) = inner.events.pop_front() {
                 return event;
             } else {
-                let task_cx_ptr = self.condvar.wait_no_sched();
+                let task_ctx_ptr = self.condvar.wait_no_sched();
                 drop(inner);
-                schedule(task_cx_ptr);
+                schedule(task_ctx_ptr);
             }
         }
     }
