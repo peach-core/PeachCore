@@ -5,6 +5,7 @@ mod net;
 pub mod process;
 mod sync;
 mod thread;
+pub mod user_space;
 
 use fs::*;
 use gui::*;
@@ -14,9 +15,9 @@ use process::*;
 use sync::*;
 use thread::*;
 #[allow(unused)]
-
 extern crate syscall_nr;
 use syscall_nr::call;
+use user_space::__user;
 
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
     match syscall_id {
@@ -24,11 +25,11 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         call::CONNECT => sys_connect(args[0] as _, args[1] as _, args[2] as _),
         call::LISTEN => sys_listen(args[0] as _),
         call::ACCEPT => sys_accept(args[0] as _),
-        call::OPENAT => sys_open(args[0] as *const u8, args[1] as u32),
+        call::OPENAT => sys_open(__user::new(args[0] as *const u8), args[1] as u32),
         call::CLOSE => sys_close(args[0]),
-        call::PIPE2 => sys_pipe(args[0] as *mut usize),
-        call::READ => sys_read(args[0], args[1] as *const u8, args[2]),
-        call::WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
+        call::PIPE2 => sys_pipe(__user::new(args[0] as *mut usize)),
+        call::READ => sys_read(args[0], __user::new(args[1] as *const u8), args[2]),
+        call::WRITE => sys_write(args[0], __user::new(args[1] as *const u8), args[2]),
         call::EXIT => sys_exit(args[0] as i32),
         call::NANOSLEEP => sys_sleep(args[0]),
         call::SCHED_YIELD => sys_yield(),
@@ -36,8 +37,11 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         call::GETTIMEOFDAY => sys_get_time(),
         call::GETPID => sys_getpid(),
         call::CLONE => sys_fork(),
-        call::EXECVE => sys_exec(args[0] as *const u8, args[1] as *const usize),
-        call::WAIT4 => sys_waitpid(args[0] as isize, args[1] as *mut i32),
+        call::EXECVE => sys_exec(
+            __user::new(args[0] as *const u8),
+            __user::new(args[1] as *const usize),
+        ),
+        call::WAIT4 => sys_waitpid(args[0] as isize, __user::new(args[1] as *mut i32)),
         call::THREAD_CREATE => sys_thread_create(args[0], args[1]),
         call::GETTID => sys_gettid(),
         call::WAITID => sys_waittid(args[0]) as isize,

@@ -1,3 +1,5 @@
+use crate::syscall::user_space::__user;
+
 use super::{
     frame_alloc,
     FrameTracker,
@@ -147,9 +149,9 @@ impl PageTable {
     }
 }
 
-pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&'static mut [u8]> {
+pub fn translated_byte_buffer(token: usize, ptr: __user<*const u8>, len: usize) -> Vec<&'static mut [u8]> {
     let page_table = PageTable::from_token(token);
-    let mut start = ptr as usize;
+    let mut start = ptr.inner() as usize;
     let end = start + len;
     let mut v = Vec::new();
     while start < end {
@@ -170,10 +172,10 @@ pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&
 }
 
 /// Load a string from other address spaces into kernel space without an end `\0`.
-pub fn translated_str(token: usize, ptr: *const u8) -> String {
+pub fn translated_str(token: usize, ptr: __user<*const u8>) -> String {
     let page_table = PageTable::from_token(token);
     let mut string = String::new();
-    let mut va = ptr as usize;
+    let mut va = ptr.inner() as usize;
     loop {
         let ch: u8 = *(page_table
             .translate_va(VirtAddr::from(va))
@@ -188,17 +190,17 @@ pub fn translated_str(token: usize, ptr: *const u8) -> String {
     string
 }
 
-pub fn translated_ref<T>(token: usize, ptr: *const T) -> &'static T {
+pub fn translated_ref<T>(token: usize, ptr: __user<*const T>) -> &'static T {
     let page_table = PageTable::from_token(token);
     page_table
-        .translate_va(VirtAddr::from(ptr as usize))
+        .translate_va(VirtAddr::from(ptr.inner() as usize))
         .unwrap()
         .get_ref()
 }
 
-pub fn translated_refmut<T>(token: usize, ptr: *mut T) -> &'static mut T {
+pub fn translated_refmut<T>(token: usize, ptr: __user<*mut T>) -> &'static mut T {
     let page_table = PageTable::from_token(token);
-    let va = ptr as usize;
+    let va = ptr.inner() as usize;
     page_table
         .translate_va(VirtAddr::from(va))
         .unwrap()

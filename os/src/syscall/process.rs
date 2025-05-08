@@ -25,6 +25,8 @@ use alloc::{
     vec::Vec,
 };
 
+use super::user_space::__user;
+
 pub fn sys_exit(exit_code: i32) -> ! {
     exit_current_and_run_next(exit_code);
     panic!("Unreachable in sys_exit!");
@@ -57,7 +59,7 @@ pub fn sys_fork() -> isize {
     new_pid as isize
 }
 
-pub fn sys_exec(path: *const u8, mut args: *const usize) -> isize {
+pub fn sys_exec(path: __user<*const u8>, mut args: __user<*const usize>) -> isize {
     let token = current_user_token();
     let path = translated_str(token, path);
     let mut args_vec: Vec<String> = Vec::new();
@@ -66,9 +68,9 @@ pub fn sys_exec(path: *const u8, mut args: *const usize) -> isize {
         if arg_str_ptr == 0 {
             break;
         }
-        args_vec.push(translated_str(token, arg_str_ptr as *const u8));
+        args_vec.push(translated_str(token, (arg_str_ptr as *const u8).into()));
         unsafe {
-            args = args.add(1);
+            args = __user::new(args.inner().add(1));
         }
     }
     if let Some(app_inode) = open_file(path.as_str(), OpenFlags::RDONLY) {
@@ -85,7 +87,7 @@ pub fn sys_exec(path: *const u8, mut args: *const usize) -> isize {
 
 /// If there is not a child process whose pid is same as given, return -1.
 /// Else if there is a child process but it is still running, return -2.
-pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut i32) -> isize {
+pub fn sys_waitpid(pid: isize, exit_code_ptr: __user<*mut i32>) -> isize {
     let process = current_process();
     // find a child process
 

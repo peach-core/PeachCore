@@ -59,9 +59,9 @@ pub struct ProcessControlBlockInner {
     pub task_res_allocator: RecycleAllocator,               /* thread allocator: use tid to
                                                              * alloc shared resources in thread
                                                              * group */
-    pub mutex_list: Vec<Option<Arc<dyn Mutex>>>,            
-    pub semaphore_list: Vec<Option<Arc<Semaphore>>>,        
-    pub condvar_list: Vec<Option<Arc<Condvar>>>,    
+    pub mutex_list: Vec<Option<Arc<dyn Mutex>>>,
+    pub semaphore_list: Vec<Option<Arc<Semaphore>>>,
+    pub condvar_list: Vec<Option<Arc<Condvar>>>,
 }
 
 impl ProcessControlBlockInner {
@@ -242,7 +242,7 @@ impl ProcessControlBlock {
             .map(|arg| {
                 translated_refmut(
                     new_token,
-                    (argv_base + arg * core::mem::size_of::<usize>()) as *mut usize,
+                    ((argv_base + arg * core::mem::size_of::<usize>()) as *mut usize).into(),
                 )
             })
             .collect();
@@ -252,10 +252,10 @@ impl ProcessControlBlock {
             *argv[i] = user_sp;
             let mut p = user_sp;
             for c in args[i].as_bytes() {
-                *translated_refmut(new_token, p as *mut u8) = *c;
+                *translated_refmut(new_token, (p as *mut u8).into()) = *c;
                 p += 1;
             }
-            *translated_refmut(new_token, p as *mut u8) = 0;
+            *translated_refmut(new_token, (p as *mut u8).into()) = 0;
         }
         // make the user_sp aligned to 8B for k210 platform
         user_sp -= user_sp % core::mem::size_of::<usize>();

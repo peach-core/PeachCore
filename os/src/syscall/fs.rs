@@ -17,7 +17,9 @@ use crate::{
 };
 use alloc::sync::Arc;
 
-pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
+use super::user_space::__user;
+
+pub fn sys_write(fd: usize, buf: __user<*const u8>, len: usize) -> isize {
     let token = current_user_token();
     let process = current_process();
     let inner = process.inner_exclusive_access();
@@ -37,7 +39,7 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     }
 }
 
-pub fn sys_read(fd: usize, buf: *const u8, len: usize) -> isize {
+pub fn sys_read(fd: usize, buf: __user<*const u8>, len: usize) -> isize {
     let token = current_user_token();
     let process = current_process();
     let inner = process.inner_exclusive_access();
@@ -57,7 +59,7 @@ pub fn sys_read(fd: usize, buf: *const u8, len: usize) -> isize {
     }
 }
 
-pub fn sys_open(path: *const u8, flags: u32) -> isize {
+pub fn sys_open(path:__user< *const u8>, flags: u32) -> isize {
     let process = current_process();
     let token = current_user_token();
     let path = translated_str(token, path);
@@ -84,7 +86,7 @@ pub fn sys_close(fd: usize) -> isize {
     0
 }
 
-pub fn sys_pipe(pipe: *mut usize) -> isize {
+pub fn sys_pipe(pipe: __user<*mut usize>) -> isize {
     let process = current_process();
     let token = current_user_token();
     let mut inner = process.inner_exclusive_access();
@@ -94,7 +96,7 @@ pub fn sys_pipe(pipe: *mut usize) -> isize {
     let write_fd = inner.alloc_fd();
     inner.fd_table[write_fd] = Some(pipe_write);
     *translated_refmut(token, pipe) = read_fd;
-    *translated_refmut(token, unsafe { pipe.add(1) }) = write_fd;
+    *translated_refmut(token, unsafe { pipe.inner().add(1).into() }) = write_fd;
     0
 }
 
