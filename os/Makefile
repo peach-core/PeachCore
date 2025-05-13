@@ -1,10 +1,12 @@
+SHELL := /bin/bash
+
 # Building
 TARGET := riscv64gc-unknown-none-elf
 MODE := release
 KERNEL_ELF := target/$(TARGET)/$(MODE)/os
 KERNEL_BIN := $(KERNEL_ELF).bin
 DISASM_TMP := target/$(TARGET)/$(MODE)/asm
-FS_IMG := ../user/target/$(TARGET)/$(MODE)/fs.img
+FS_IMG := ../easy-fs-fuse/image/fs.img
 APPS := ../user/src/bin/*
 
 CC := riscv64-unknown-elf-gcc
@@ -16,6 +18,9 @@ OS_SRC_DIR := $(OS_ROOT)/src
 OS_ASM_SRCS := $(wildcard $(OS_SRC_DIR)/*/*.S $(OS_SRC_DIR)/*.S)
 OS_OBJ_DIR := $(OS_ROOT)/target/riscv64gc-unknown-none-elf/release
 OS_ASM_OBJS := $(patsubst $(OS_SRC_DIR)/%.S, $(OS_OBJ_DIR)/%.o, $(OS_ASM_SRCS))
+
+USER_SRC := $(wildcard ../user/src/bin/*.c)
+USER_ELF := $(wildcard ../)
 
 # BOARD
 BOARD := qemu
@@ -69,8 +74,14 @@ $(KERNEL_BIN): kernel
 # generator fs-img.
 fs-img: $(APPS)
 	@cd ../user && make build TEST=$(TEST)
+	
+
+	@cd ../testsuits/basic/user && $(MAKE) \
+	 && cp build/riscv64/* ../../../easy-fs-fuse/elf/
+	@cd ../../
+	
 	@rm -f $(FS_IMG)
-	@cd ../easy-fs-fuse && cargo run --release -- -s ../user/src/bin/ -t ../user/target/riscv64gc-unknown-none-elf/release/
+	@cd ../easy-fs-fuse && $(MAKE) build
 
 # if some app was need, add here.
 $(APPS):
@@ -84,6 +95,8 @@ kernel: $(OS_OBJ_DIR)/trap/trap.o $(OS_OBJ_DIR)/trap/kpthread_trap.o
 
 clean:
 	@cargo clean
+	@cd ../user && $(MAKE) clean
+	@cd ../easy-fs-fuse && $(MAKE) clean
 
 disasm: kernel
 	@$(OBJDUMP) $(DISASM) $(KERNEL_ELF) | less

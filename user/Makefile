@@ -10,6 +10,8 @@ OBJDUMP := rust-objdump --arch-name=riscv64
 OBJCOPY := rust-objcopy --binary-architecture=riscv64
 CP := cp 
 
+IMAGE_DIR := ../easy-fs-fuse/elf/
+
 TEST ?= 
 
 elf: $(APPS)
@@ -21,7 +23,11 @@ endif
 binary: elf
 	@$(foreach elf, $(ELFS), $(OBJCOPY) $(elf) --strip-all -O binary $(patsubst $(TARGET_DIR)/%, $(TARGET_DIR)/%.bin, $(elf));)
 
-build: binary
+copy_to_elf_file: elf
+	@mkdir -p ../easy-fs-fuse/elf/
+	@$(foreach elf, $(ELFS), cp $(elf) $(patsubst $(TARGET_DIR)/%, $(IMAGE_DIR)/%, $(elf));)
+
+build: binary copy_to_elf_file
 
 clean:
 	@cargo clean
