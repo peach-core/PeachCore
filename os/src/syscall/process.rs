@@ -4,9 +4,11 @@ use crate::{
         OpenFlags,
     },
     mm::{
+        translated_byte_buffer,
         translated_ref,
         translated_refmut,
         translated_str,
+        UserBuffer,
     },
     task::{
         current_process,
@@ -43,6 +45,63 @@ pub fn sys_get_time() -> isize {
 
 pub fn sys_getpid() -> isize {
     current_task().unwrap().process.upgrade().unwrap().getpid() as isize
+}
+
+pub fn sys_getcwd(buf: __user<*const u8>, buf_len: usize) -> isize {
+    let process = current_process();
+    let cwd = process.getcwd();
+    if buf_len <= cwd.len() {
+        return 0;
+    }
+
+    let user_buf = UserBuffer::new(translated_byte_buffer(current_user_token(), buf, buf_len));
+
+    for (index, ch) in user_buf.into_iter().enumerate() {
+        if index == cwd.len() {
+            unsafe { ch.write('\0' as u8) };
+            return buf.inner() as isize;
+        }
+        unsafe { ch.write(cwd.as_bytes()[index]) };
+    }
+
+    return 0;
+}
+
+pub fn sys_chdir(path: __user<*const u8>) -> isize {
+    let new = translated_str(current_user_token(), path);
+    current_process().chdir(new.as_str())
+}
+
+pub fn sys_fchdir(fd: usize) -> isize {
+    current_process().fchdir(fd)
+}
+
+// TODO
+pub fn sys_mkdirat(_dfd: isize, name: __user<*const u8>, _mode: usize) -> isize {
+    let new = translated_str(current_user_token(), name);
+    current_process().mkdirat(new.as_str())
+}
+
+pub fn sys_unlinkat(_dfd: isize, name: __user<*const u8>) -> isize {
+    let new = translated_str(current_user_token(), name);
+    current_process().unlinkat(new.as_str())
+}
+
+#[allow(unused)]
+pub fn sys_symlinkat(
+    _oldname: __user<*const u8>, _newdfd: isize, _newname: __user<*const u8>,
+) -> isize {
+    // TODO
+    0
+}
+
+#[allow(unused)]
+pub fn sys_linkat(
+    _olddfd: isize, _oldname: __user<*const u8>, _newdfd: isize, _newname: __user<*const u8>,
+    _flags: isize,
+) -> isize {
+    //TODO
+    0
 }
 
 pub fn sys_fork() -> isize {

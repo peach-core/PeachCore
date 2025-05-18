@@ -3,7 +3,7 @@ use crate::{
     task::{
         add_task,
         current_task,
-        TaskControlBlock,
+        TaskStruct,
     },
     trap::{
         trap_handler,
@@ -16,7 +16,7 @@ pub fn sys_thread_create(entry: usize, arg: usize) -> isize {
     let task = current_task().unwrap();
     let process = task.process.upgrade().unwrap();
     // create a new thread
-    let new_task = Arc::new(TaskControlBlock::new(
+    let new_task = Arc::new(TaskStruct::new(
         Arc::clone(&process),
         task.inner_exclusive_access()
             .res

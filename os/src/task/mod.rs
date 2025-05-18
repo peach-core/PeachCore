@@ -7,6 +7,7 @@ mod signal;
 mod switch;
 #[allow(clippy::module_inception)]
 mod task;
+mod dir_struct;
 
 use self::id::TaskUserRes;
 use crate::{
@@ -53,8 +54,8 @@ pub use processor::{
 };
 pub use signal::SignalFlags;
 pub use task::{
-    TaskControlBlock,
     TaskStatus,
+    TaskStruct,
 };
 
 pub fn suspend_current_and_run_next() {
@@ -208,5 +209,5 @@ lazy_static! {
 #[allow(unused)]
 pub fn add_kpthread() {
     let kpthread = KTHREAD_PROC.clone();
-    trace!("kpthread pid: {}", kpthread.pid.0);
+    trace!("kpthread pid: {}", kpthread.pid_handle.0);
 }

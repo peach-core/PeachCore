@@ -8,7 +8,7 @@ use lose_net_stack::packets::tcp::TCPPacket;
 use crate::{
     fs::File,
     sync::UPIntrFreeCell,
-    task::TaskControlBlock,
+    task::TaskStruct,
 };
 
 use super::tcp::TCP;
@@ -16,7 +16,7 @@ use super::tcp::TCP;
 pub struct Port {
     pub port: u16,
     pub receivable: bool,
-    pub schedule: Option<Arc<TaskControlBlock>>,
+    pub schedule: Option<Arc<TaskStruct>>,
 }
 
 lazy_static! {
@@ -50,7 +50,7 @@ pub fn listen(port: u16) -> Option<usize> {
 }
 
 // can accept request
-pub fn accept(listen_index: usize, task: Arc<TaskControlBlock>) {
+pub fn accept(listen_index: usize, task: Arc<TaskStruct>) {
     let mut listen_table = LISTEN_TABLE.exclusive_access();
     assert!(listen_index < listen_table.len());
     let listen_port = listen_table[listen_index].as_mut();
@@ -93,7 +93,7 @@ pub fn check_accept(port: u16, tcp_packet: &TCPPacket) -> Option<()> {
     })
 }
 
-pub fn accept_connection(_port: u16, tcp_packet: &TCPPacket, task: Arc<TaskControlBlock>) {
+pub fn accept_connection(_port: u16, tcp_packet: &TCPPacket, task: Arc<TaskStruct>) {
     let process = task.process.upgrade().unwrap();
     let mut inner = process.inner_exclusive_access();
     let fd = inner.alloc_fd();

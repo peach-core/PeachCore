@@ -3,8 +3,8 @@ use super::{
     fetch_task,
     ProcessControlBlock,
     TaskContext,
-    TaskControlBlock,
     TaskStatus,
+    TaskStruct,
 };
 use crate::{
     sync::UPIntrFreeCell,
@@ -15,7 +15,7 @@ use core::arch::asm;
 use lazy_static::*;
 
 pub struct Processor {
-    current: Option<Arc<TaskControlBlock>>,
+    current: Option<Arc<TaskStruct>>,
     idle_task_ctx: TaskContext,
 }
 
@@ -29,10 +29,10 @@ impl Processor {
     fn get_idle_task_ctx_ptr(&mut self) -> *mut TaskContext {
         &mut self.idle_task_ctx as *mut _
     }
-    pub fn take_current(&mut self) -> Option<Arc<TaskControlBlock>> {
+    pub fn take_current(&mut self) -> Option<Arc<TaskStruct>> {
         self.current.take()
     }
-    pub fn current(&self) -> Option<Arc<TaskControlBlock>> {
+    pub fn current(&self) -> Option<Arc<TaskStruct>> {
         self.current.as_ref().map(Arc::clone)
     }
 }
@@ -64,11 +64,11 @@ pub fn run_tasks() {
     }
 }
 
-pub fn take_current_task() -> Option<Arc<TaskControlBlock>> {
+pub fn take_current_task() -> Option<Arc<TaskStruct>> {
     PROCESSOR.exclusive_access().take_current()
 }
 
-pub fn current_task() -> Option<Arc<TaskControlBlock>> {
+pub fn current_task() -> Option<Arc<TaskStruct>> {
     PROCESSOR.exclusive_access().current()
 }
 

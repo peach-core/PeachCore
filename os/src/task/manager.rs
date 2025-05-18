@@ -1,7 +1,7 @@
 use super::{
     ProcessControlBlock,
-    TaskControlBlock,
     TaskStatus,
+    TaskStruct,
 };
 use crate::sync::UPIntrFreeCell;
 use alloc::{
@@ -14,7 +14,7 @@ use alloc::{
 use lazy_static::*;
 
 pub struct TaskManager {
-    ready_queue: VecDeque<Arc<TaskControlBlock>>,
+    ready_queue: VecDeque<Arc<TaskStruct>>,
 }
 
 /// A simple FIFO scheduler.
@@ -24,10 +24,10 @@ impl TaskManager {
             ready_queue: VecDeque::new(),
         }
     }
-    pub fn add(&mut self, task: Arc<TaskControlBlock>) {
+    pub fn add(&mut self, task: Arc<TaskStruct>) {
         self.ready_queue.push_back(task);
     }
-    pub fn fetch(&mut self) -> Option<Arc<TaskControlBlock>> {
+    pub fn fetch(&mut self) -> Option<Arc<TaskStruct>> {
         self.ready_queue.pop_front()
     }
 }
@@ -39,18 +39,18 @@ lazy_static! {
         unsafe { UPIntrFreeCell::new(BTreeMap::new()) };
 }
 
-pub fn add_task(task: Arc<TaskControlBlock>) {
+pub fn add_task(task: Arc<TaskStruct>) {
     TASK_MANAGER.exclusive_access().add(task);
 }
 
-pub fn wakeup_task(task: Arc<TaskControlBlock>) {
+pub fn wakeup_task(task: Arc<TaskStruct>) {
     let mut task_inner = task.inner_exclusive_access();
     task_inner.task_status = TaskStatus::Ready;
     drop(task_inner);
     add_task(task);
 }
 
-pub fn fetch_task() -> Option<Arc<TaskControlBlock>> {
+pub fn fetch_task() -> Option<Arc<TaskStruct>> {
     TASK_MANAGER.exclusive_access().fetch()
 }
 

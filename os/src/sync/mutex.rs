@@ -4,7 +4,7 @@ use crate::task::{
     current_task,
     suspend_current_and_run_next,
     wakeup_task,
-    TaskControlBlock,
+    TaskStruct,
 };
 use alloc::{
     collections::VecDeque,
@@ -55,7 +55,7 @@ pub struct MutexBlocking {
 
 pub struct MutexBlockingInner {
     locked: bool,
-    wait_queue: VecDeque<Arc<TaskControlBlock>>,
+    wait_queue: VecDeque<Arc<TaskStruct>>,
 }
 
 impl MutexBlocking {

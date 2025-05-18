@@ -9,7 +9,7 @@ use crate::{
         current_task,
         wakeup_task,
         TaskContext,
-        TaskControlBlock,
+        TaskStruct,
     },
 };
 use alloc::{
@@ -22,7 +22,7 @@ pub struct Condvar {
 }
 
 pub struct CondvarInner {
-    pub wait_queue: VecDeque<Arc<TaskControlBlock>>,
+    pub wait_queue: VecDeque<Arc<TaskStruct>>,
 }
 
 impl Condvar {

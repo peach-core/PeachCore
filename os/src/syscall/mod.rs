@@ -19,7 +19,7 @@ extern crate syscall_nr;
 use syscall_nr::call;
 use user_space::__user;
 
-pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
+pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
     match syscall_id {
         call::DUP3 => sys_dup(args[0]),
         call::CONNECT => sys_connect(args[0] as _, args[1] as _, args[2] as _),
@@ -58,6 +58,26 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         call::FRAMEBUFFER_FLUSH => sys_framebuffer_flush(),
         call::EVENT_GET => sys_event_get(),
         call::KEY_PRESSED => sys_key_pressed(),
+
+        call::GETCWD => sys_getcwd(__user::new(args[0] as *const u8), args[1]),
+        // TODO, only interface here.
+        call::CHDIR => sys_chdir(__user::new(args[0] as *const u8)),
+        call::FCHDIR => sys_fchdir(args[0]),
+        call::MKDIRAT => sys_mkdirat(args[0] as isize, __user::new(args[1] as *const u8), args[2]),
+        call::UNLINKAT => sys_unlinkat(args[0] as isize, __user::new(args[1] as *const u8)),
+        call::SYMLINKAT => sys_symlinkat(
+            __user::new(args[0] as *const u8),
+            args[1] as isize,
+            __user::new(args[2] as *const u8),
+        ),
+        call::LINKAT => sys_linkat(
+            args[0] as isize,
+            __user::new(args[1] as *const u8),
+            args[2] as isize,
+            __user::new(args[3] as *const u8),
+            args[4] as isize,
+        ),
+
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }

@@ -20,7 +20,7 @@ use alloc::sync::{
     Weak,
 };
 
-pub struct TaskControlBlock {
+pub struct TaskStruct {
     // immutable
     pub process: Weak<ProcessControlBlock>,
     pub kstack: KernelStack,
@@ -28,7 +28,7 @@ pub struct TaskControlBlock {
     pub inner: UPIntrFreeCell<TaskControlBlockInner>,
 }
 
-impl TaskControlBlock {
+impl TaskStruct {
     pub fn inner_exclusive_access(&self) -> UPIntrRefMut<'_, TaskControlBlockInner> {
         self.inner.exclusive_access()
     }
@@ -59,7 +59,7 @@ impl TaskControlBlockInner {
     }
 }
 
-impl TaskControlBlock {
+impl TaskStruct {
     pub fn new(
         process: Arc<ProcessControlBlock>, ustack_base: usize, alloc_user_res: bool,
     ) -> Self {
@@ -82,9 +82,7 @@ impl TaskControlBlock {
         }
     }
 
-    pub fn new_kpthread(
-        process: Arc<ProcessControlBlock>, ustack_base: usize,
-    ) -> Self {
+    pub fn new_kpthread(process: Arc<ProcessControlBlock>, ustack_base: usize) -> Self {
         let res = TaskUserRes::new_kpthread(Arc::clone(&process), ustack_base);
         let kstack = kstack_alloc();
         let kstack_top = kstack.get_top();
@@ -96,7 +94,9 @@ impl TaskControlBlock {
                     res: Some(res),
                     trap_ctx_ppn: 0.into(),
                     // save TrapContext in the top of kernel stack.
-                    task_ctx: TaskContext::goto_kpthread_trap_return(kstack_top - size_of::<TrapContext>()),
+                    task_ctx: TaskContext::goto_kpthread_trap_return(
+                        kstack_top - size_of::<TrapContext>(),
+                    ),
                     task_status: TaskStatus::Ready,
                     exit_code: None,
                 })

@@ -4,7 +4,15 @@ use crate::{
     config::TRAMPOLINE,
     syscall::syscall,
     task::{
-        check_signals_of_current, current_add_signal, current_process, current_trap_ctx, current_trap_ctx_user_va, current_user_token, exit_current_and_run_next, suspend_current_and_run_next, SignalFlags
+        check_signals_of_current,
+        current_add_signal,
+        current_process,
+        current_trap_ctx,
+        current_trap_ctx_user_va,
+        current_user_token,
+        exit_current_and_run_next,
+        suspend_current_and_run_next,
+        SignalFlags,
     },
     timer::{
         check_timer,
@@ -91,7 +99,10 @@ pub fn trap_handler() -> ! {
             enable_supervisor_interrupt();
 
             // get system call return value
-            let result = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]);
+            let result = syscall(
+                cx.x[17],
+                [cx.x[10], cx.x[11], cx.x[12], cx.x[13], cx.x[14], cx.x[15]],
+            );
             // cx is changed during sys_exec, so we have to call it again
             cx = current_trap_ctx();
             cx.x[10] = result as usize;
@@ -187,10 +198,9 @@ pub fn trap_from_kernel(_trap_ctx: &TrapContext) {
     }
 }
 
-
-/*********************************************************/
-/*                   for kernel pthread                  */
-/*********************************************************/
+/******************************************************** */
+/* for kernel pthread */
+/******************************************************** */
 
 /// kpthread will go here after interrupt.
 pub fn kpthread_trap_return(ctx: &mut TrapContext) -> ! {

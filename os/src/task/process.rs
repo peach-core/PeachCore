@@ -1,17 +1,20 @@
 use super::{
     add_task,
+    dir_struct::DirStruct,
     id::RecycleAllocator,
     manager::insert_into_pid2process,
     pid_alloc,
     PidHandle,
     SignalFlags,
-    TaskControlBlock,
+    TaskStruct,
 };
 use crate::{
     fs::{
         File,
+        OSInode,
         Stdin,
         Stdout,
+        ROOT_INODE,
     },
     mm::{
         translated_refmut,
@@ -42,23 +45,43 @@ use alloc::{
 
 pub struct ProcessControlBlock {
     // immutable
-    pub pid: PidHandle,
+    pub pid_handle: PidHandle,
     // mutable
     inner: UPIntrFreeCell<ProcessControlBlockInner>,
 }
 
+#[rustfmt::skip]
 pub struct ProcessControlBlockInner {
+    // =====================================================
+    //                  Process Status
+    // =====================================================
     pub is_zombie: bool,                                    // is_zombie process
-    pub memory_set: MemorySet,                              // memory space
+    pub exit_code: i32,                                     // exit code
+
+
+    // =====================================================
+    //                    Process Tree
+    // =====================================================
     pub parent: Option<Weak<ProcessControlBlock>>,          // parent process
     pub children: Vec<Arc<ProcessControlBlock>>,            // children processes array
-    pub exit_code: i32,                                     // exit code
-    pub fd_table: Vec<Option<Arc<dyn File + Send + Sync>>>, // file description
-    pub signals: SignalFlags,                               // signals
-    pub tasks: Vec<Option<Arc<TaskControlBlock>>>,          // threads in this process group
+
+    pub dir_struct: Arc<DirStruct>,                         // Process Session. Aslo Process Group.
+
+
+    // =====================================================
+    //                      Thread
+    // =====================================================
+    pub tasks: Vec<Option<Arc<TaskStruct>>>,                // threads in this process group
     pub task_res_allocator: RecycleAllocator,               /* thread allocator: use tid to
                                                              * alloc shared resources in thread
                                                              * group */
+
+    // =====================================================
+    //                     Resources
+    // =====================================================
+    pub memory_set: MemorySet,                              // memory space
+    pub fd_table: Vec<Option<Arc<dyn File + Send + Sync>>>, // file description
+    pub signals: SignalFlags,                               // signals
     pub mutex_list: Vec<Option<Arc<dyn Mutex>>>,
     pub semaphore_list: Vec<Option<Arc<Semaphore>>>,
     pub condvar_list: Vec<Option<Arc<Condvar>>>,
@@ -91,8 +114,12 @@ impl ProcessControlBlockInner {
         self.tasks.len()
     }
 
-    pub fn get_task(&self, tid: usize) -> Arc<TaskControlBlock> {
+    pub fn get_task(&self, tid: usize) -> Arc<TaskStruct> {
         self.tasks[tid].as_ref().unwrap().clone()
+    }
+
+    pub fn get_cwd(&self) -> String {
+        self.dir_struct.getcwd()
     }
 }
 
@@ -106,8 +133,10 @@ impl ProcessControlBlock {
         let (memory_set, ustack_base, entry_point) = MemorySet::from_elf(elf_data);
         // allocate a pid
         let pid_handle = pid_alloc();
+        let root_os_inode = Arc::new(OSInode::new(true, true, ROOT_INODE.clone()));
+
         let process = Arc::new(Self {
-            pid: pid_handle,
+            pid_handle,
             inner: unsafe {
                 UPIntrFreeCell::new(ProcessControlBlockInner {
                     is_zombie: false,
@@ -123,6 +152,7 @@ impl ProcessControlBlock {
                         // 2 -> stderr
                         Some(Arc::new(Stdout)),
                     ],
+                    dir_struct: Arc::new(DirStruct::new(&root_os_inode)),
                     signals: SignalFlags::empty(),
                     tasks: Vec::new(),
                     task_res_allocator: RecycleAllocator::new(),
@@ -133,11 +163,7 @@ impl ProcessControlBlock {
             },
         });
         // create a main thread, we should allocate ustack and trap_ctx here
-        let task = Arc::new(TaskControlBlock::new(
-            Arc::clone(&process),
-            ustack_base,
-            true,
-        ));
+        let task = Arc::new(TaskStruct::new(Arc::clone(&process), ustack_base, true));
         // prepare trap_ctx of main thread
         let task_inner = task.inner_exclusive_access();
         let trap_ctx = task_inner.get_trap_ctx();
@@ -165,9 +191,10 @@ impl ProcessControlBlock {
         // allocate a pid
         let pid_handle = pid_alloc();
         let ustack_base = user_stack_upper_bound;
+        let root_os_inode = Arc::new(OSInode::new(true, true, ROOT_INODE.clone()));
 
         let process = Arc::new(Self {
-            pid: pid_handle,
+            pid_handle,
             inner: unsafe {
                 UPIntrFreeCell::new(ProcessControlBlockInner {
                     is_zombie: false,
@@ -183,6 +210,7 @@ impl ProcessControlBlock {
                         // 2 -> stderr
                         Some(Arc::new(Stdout)),
                     ],
+                    dir_struct: Arc::new(DirStruct::new(&root_os_inode)),
                     signals: SignalFlags::empty(),
                     tasks: Vec::new(),
                     task_res_allocator: RecycleAllocator::new(),
@@ -193,10 +221,7 @@ impl ProcessControlBlock {
             },
         });
         // create a main thread, we should allocate ustack and trap_ctx here
-        let task = Arc::new(TaskControlBlock::new_kpthread(
-            Arc::clone(&process),
-            ustack_base,
-        ));
+        let task = Arc::new(TaskStruct::new_kpthread(Arc::clone(&process), ustack_base));
         // prepare trap_ctx of main thread
         let task_inner = task.inner_exclusive_access();
         let ustack_top = task_inner.res.as_ref().unwrap().ustack_top();
@@ -289,9 +314,12 @@ impl ProcessControlBlock {
                 new_fd_table.push(None);
             }
         }
+        // copy dir_struct.
+        let dir = DirStruct::new(&parent.dir_struct.get_current_inode());
+
         // create child process pcb
         let child = Arc::new(Self {
-            pid,
+            pid_handle: pid,
             inner: unsafe {
                 UPIntrFreeCell::new(ProcessControlBlockInner {
                     is_zombie: false,
@@ -300,6 +328,7 @@ impl ProcessControlBlock {
                     children: Vec::new(),
                     exit_code: 0,
                     fd_table: new_fd_table,
+                    dir_struct: Arc::new(dir),
                     signals: SignalFlags::empty(),
                     tasks: Vec::new(),
                     task_res_allocator: RecycleAllocator::new(),
@@ -312,7 +341,7 @@ impl ProcessControlBlock {
         // add child
         parent.children.push(Arc::clone(&child));
         // create main thread of child process
-        let task = Arc::new(TaskControlBlock::new(
+        let task = Arc::new(TaskStruct::new(
             Arc::clone(&child),
             parent
                 .get_task(0)
@@ -341,6 +370,33 @@ impl ProcessControlBlock {
     }
 
     pub fn getpid(&self) -> usize {
-        self.pid.0
+        self.pid_handle.0
+    }
+
+    pub fn chdir(&self, path: &str) -> isize {
+        self.inner.exclusive_session(|inner| {
+            inner.dir_struct.chdir(path);
+        });
+        0
+    }
+
+    pub fn getcwd(& self) -> String {
+        self.inner
+            .exclusive_session(|inner| inner.get_cwd())
+    }
+
+    // TODO
+    pub fn fchdir(&self, _fd: usize) -> isize {
+        0
+    }
+
+    // TODO
+    pub fn mkdirat(&self, _path: &str) -> isize {
+        0
+    }
+
+    // TODO
+    pub fn unlinkat(&self, _path: &str) -> isize {
+        0
     }
 }

@@ -15,6 +15,8 @@ pub use inode::{
     list_apps,
     open_file,
     OpenFlags,
+    OSInode,
+    ROOT_INODE,
 };
 pub use pipe::make_pipe;
 pub use stdio::{

@@ -6,7 +6,7 @@ use crate::{
     sync::UPIntrFreeCell,
     task::{
         wakeup_task,
-        TaskControlBlock,
+        TaskStruct,
     },
 };
 use alloc::{
@@ -33,7 +33,7 @@ pub fn set_next_trigger() {
 
 pub struct TimerCondVar {
     pub expire_ms: usize,
-    pub task: Arc<TaskControlBlock>,
+    pub task: Arc<TaskStruct>,
 }
 
 impl PartialEq for TimerCondVar {
@@ -61,7 +61,7 @@ lazy_static! {
         unsafe { UPIntrFreeCell::new(BinaryHeap::<TimerCondVar>::new()) };
 }
 
-pub fn add_timer(expire_ms: usize, task: Arc<TaskControlBlock>) {
+pub fn add_timer(expire_ms: usize, task: Arc<TaskStruct>) {
     let mut timers = TIMERS.exclusive_access();
     timers.push(TimerCondVar { expire_ms, task });
 }

@@ -115,7 +115,7 @@ impl<T> UPIntrFreeCell<T> {
     }
 
     /// Panic if the data has been borrowed.
-    pub fn exclusive_access(&self) -> UPIntrRefMut<'_, T> {
+    pub fn exclusive_access<'a>(&'a self) -> UPIntrRefMut<'a, T> {
         INTR_MASKING_INFO.get_mut().enter();
         UPIntrRefMut(Some(self.inner.borrow_mut()))
     }
@@ -125,6 +125,7 @@ impl<T> UPIntrFreeCell<T> {
         F: FnOnce(&mut T) -> V,
     {
         let mut inner = self.exclusive_access();
+        // let deref_mut = unsafe { core::mem::transmute(inner.deref_mut()) };
         f(inner.deref_mut())
     }
 }

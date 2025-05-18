@@ -4,7 +4,7 @@ use crate::{
         block_current_and_run_next,
         current_task,
         wakeup_task,
-        TaskControlBlock,
+        TaskStruct,
     },
 };
 use alloc::{
@@ -18,7 +18,7 @@ pub struct Semaphore {
 
 pub struct SemaphoreInner {
     pub count: isize,
-    pub wait_queue: VecDeque<Arc<TaskControlBlock>>,
+    pub wait_queue: VecDeque<Arc<TaskStruct>>,
 }
 
 impl Semaphore {
