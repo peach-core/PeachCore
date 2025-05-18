@@ -89,3 +89,37 @@ tidptr: 要被写入当前进程 `tid` 的用户空间地址指针. 后续线程
 
 ### `return`
 当前进程的 `tid` 值.
+
+## POSIX pthread lib
+
+### 对 `clone` 的约束
+
+- 由于 `clone syscall` 过于强大, 而 `POSIX线程` 的要求相对严格, 因此有的 `clone flag` 在 pthread_create 时有固定设置, 不允许修改, 以保证 `clone` 的行为符合 `POSIX` 规范.
+
+#### 必须被设置的 `flag` (核心标志)
+
+|Flag|功能|
+|:-:|:-:|
+|`CLONE_VM`         | ​共享虚拟内存空间​(线程共享同一进程的地址空间).|
+|`CLONE_FS`         | 共享文件系统信息​(包括当前工作目录 `cwd`、根目录等 `fs_struct`).|
+|`CLONE_FILES`      | ​共享文件描述符表​(线程共享打开的文件句柄).|
+|`CLONE_SIGHAND`    | ​共享信号处理程序​(线程共享相同的信号处理函数表).|
+|`CLONE_THREAD`     | ​线程组标识​(将新线程加入同一线程组，共享 `TGID，符合` `POSIX` 要求).|
+|`CLONE_SYSVSEM`    | ​共享 `System V` 信号量​(确保线程间信号量操作一致).|
+
+#### 不允许被设置的 `flag`
+
+|​Flag​|​原因​|
+|:-:|:-:|
+|`CLONE_NEWNS`  | 创建新挂载命名空间(线程需共享挂载点，隔离会导致行为异常)|
+|`CLONE_NEWPID` | 创建新 `PID` 命名空间(线程需共享同一进程 `ID` 空间)|
+|`CLONE_NEWNET` | 创建新网络命名空间(线程需共享网络栈)|
+
+#### 可选的 `flag`
+
+|​Flag​|作用​|
+|:-:|:-:|
+|`CLONE_SETTLS`         |​设置线程本地存储(`TLS`)​(用于 pthread_key_create 等 TLS 操作)|
+|`CLONE_PARENT_SETTID​`  |将线程 ID 写入父进程指定的地址​(用于返回线程 TID)|
+|`CLONE_CHILD_CL`       |EARTID​线程退出时清除子线程 ID​(用于线程同步和资源回收)|
+|`CLONE_DETACHED`       |​创建分离线程​(已废弃，现代 glibc 改用 pthread_detach 控制)|
