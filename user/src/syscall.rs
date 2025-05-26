@@ -1,6 +1,14 @@
 extern crate syscall_nr;
 use syscall_nr::call;
 
+bitflags! {
+    pub struct MapProtect: u8{
+        const R = 1 << 0;
+        const W = 1 << 1;
+        const X = 1 << 2;
+    }
+}
+
 fn syscall(id: usize, args: [usize; 3]) -> isize {
     let mut ret: isize;
     unsafe {
@@ -157,4 +165,16 @@ pub fn sys_event_get() -> isize {
 
 pub fn sys_key_pressed() -> isize {
     syscall(call::KEY_PRESSED, [0, 0, 0])
+}
+
+pub fn sys_sbrk(size: isize) -> isize {
+    syscall(call::BRK, [size as usize, 0, 0])
+}
+
+pub fn sys_mmap(addr: usize, len: usize, prot: MapProtect) -> isize {
+    syscall(call::MMAP, [addr, len, prot.bits() as usize])
+}
+
+pub fn sys_munmap(addr: usize) -> isize {
+    syscall(call::MUNMAP, [addr, 0, 0])
 }

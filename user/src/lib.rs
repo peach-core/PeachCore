@@ -12,6 +12,7 @@ mod net;
 mod sync;
 mod syscall;
 mod task;
+mod mm;
 
 extern crate alloc;
 #[macro_use]
@@ -25,6 +26,9 @@ pub use net::*;
 pub use sync::*;
 use syscall::*;
 pub use task::*;
+pub use mm::*;
+
+pub use syscall::MapProtect;
 
 const USER_HEAP_SIZE: usize = 32768;
 

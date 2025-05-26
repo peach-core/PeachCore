@@ -146,7 +146,7 @@ pub fn sys_exec(path: __user<*const u8>, mut args: __user<*const usize>) -> isiz
 
 /// If there is not a child process whose pid is same as given, return -1.
 /// Else if there is a child process but it is still running, return -2.
-pub fn sys_waitpid(pid: isize, exit_code_ptr: __user<*mut i32>) -> isize {
+pub fn sys_wait4(pid: isize, exit_code_ptr: __user<*mut i32>) -> isize {
     let process = current_process();
     // find a child process
 

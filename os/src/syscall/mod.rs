@@ -1,6 +1,7 @@
 mod fs;
 mod gui;
 mod input;
+mod mm;
 mod net;
 pub mod process;
 mod sync;
@@ -10,6 +11,11 @@ pub mod user_space;
 use fs::*;
 use gui::*;
 use input::*;
+use mm::{
+    sys_brk,
+    sys_mmap,
+    sys_munmap,
+};
 use net::*;
 use process::*;
 use sync::*;
@@ -41,7 +47,7 @@ pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
             __user::new(args[0] as *const u8),
             __user::new(args[1] as *const usize),
         ),
-        call::WAIT4 => sys_waitpid(args[0] as isize, __user::new(args[1] as *mut i32)),
+        call::WAIT4 => sys_wait4(args[0] as isize, __user::new(args[1] as *mut i32)),
         call::THREAD_CREATE => sys_thread_create(args[0], args[1]),
         call::GETTID => sys_gettid(),
         call::WAITID => sys_waittid(args[0]) as isize,
@@ -77,6 +83,9 @@ pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
             __user::new(args[3] as *const u8),
             args[4] as isize,
         ),
+        call::BRK => sys_brk(args[0] as isize),
+        call::MMAP => sys_mmap(args[0], args[1], args[2]),
+        call::MUNMAP => sys_munmap(args[0]),
 
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }

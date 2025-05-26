@@ -27,8 +27,8 @@ use crate::{
 use alloc::{
     collections::BTreeMap,
     sync::Arc,
-    vec::Vec,
 };
+use log::info;
 use core::arch::asm;
 use lazy_static::*;
 use riscv::register::satp;
@@ -57,14 +57,14 @@ pub fn kernel_token() -> usize {
 
 pub struct MemorySet {
     page_table: PageTable,
-    areas: Vec<MapArea>,
+    areas: BTreeMap<VirtPageNum, MapArea>,
 }
 
 impl MemorySet {
     pub fn new_bare() -> Self {
         Self {
             page_table: PageTable::new(),
-            areas: Vec::new(),
+            areas: BTreeMap::new(),
         }
     }
     pub fn token(&self) -> usize {
@@ -80,15 +80,9 @@ impl MemorySet {
         );
     }
     pub fn remove_area_with_start_vpn(&mut self, start_vpn: VirtPageNum) {
-        if let Some((idx, area)) = self
-            .areas
-            .iter_mut()
-            .enumerate()
-            .find(|(_, area)| area.vpn_range.get_start() == start_vpn)
-        {
-            area.unmap(&mut self.page_table);
-            self.areas.remove(idx);
-        }
+        let area = self.areas.get_mut(&start_vpn);
+        area.unwrap().unmap(&mut self.page_table);
+        self.areas.remove(&start_vpn);
     }
     /// Add a new MapArea into this MemorySet.
     /// Assuming that there are no conflicts in the virtual address
@@ -98,7 +92,7 @@ impl MemorySet {
         if let Some(data) = data {
             map_area.copy_data(&self.page_table, data);
         }
-        self.areas.push(map_area);
+        self.areas.insert(map_area.vpn_range.get_start(), map_area);
     }
     /// Mention that trampoline is not collected by areas.
     fn map_trampoline(&mut self) {
@@ -251,7 +245,7 @@ impl MemorySet {
 
         (
             memory_set,
-            user_stack_top.into(),
+            program_brk.into(),
             elf.header.pt2.entry_point() as usize,
         )
     }
@@ -294,10 +288,10 @@ impl MemorySet {
         memory_set.map_trampoline();
         // copy data sections/trap_context/user_stack
         for area in user_space.areas.iter() {
-            let new_area = MapArea::from_another(area);
+            let new_area = MapArea::from_another(area.1);
             memory_set.push(new_area, None);
             // copy data from another space
-            for vpn in area.vpn_range {
+            for vpn in area.1.vpn_range {
                 let src_ppn = user_space.translate(vpn).unwrap().ppn();
                 let dst_ppn = memory_set.translate(vpn).unwrap().ppn();
                 dst_ppn
@@ -320,6 +314,43 @@ impl MemorySet {
     pub fn recycle_data_pages(&mut self) {
         //*self = Self::new_bare();
         self.areas.clear();
+    }
+
+    pub fn shink_to(&mut self, lower_bound: VirtAddr, new_vpn: VirtAddr) -> bool {
+        if let Some(map_area) = self.areas.get_mut(&lower_bound.floor()) {
+            map_area.shink_to(&mut self.page_table, new_vpn.floor());
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn append_to(&mut self, lower_bound: VirtAddr, new_vpn: VirtAddr) -> bool {
+        if let Some(map_area) = self.areas.get_mut(&lower_bound.floor()) {
+            map_area.append_to(&mut self.page_table, new_vpn.floor());
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn mmap(&mut self, start_addr: VirtAddr, end_addr: VirtAddr, pte_flag: PTEFlags) -> isize {
+        assert!(end_addr > start_addr);
+        self.push(
+            MapArea::new(
+                start_addr,
+                end_addr,
+                MapType::Framed,
+                MapPermission::from_bits_truncate(pte_flag.bits()),
+            ),
+            None,
+        );
+        0
+    }
+
+    pub fn munmap(&mut self, start_addr: VirtAddr) -> isize {
+        self.remove_area_with_start_vpn(start_addr.floor().into());
+        0
     }
 }
 
@@ -387,6 +418,38 @@ impl MapArea {
             self.unmap_one(page_table, vpn);
         }
     }
+
+    #[allow(unused)]
+    // Shink range to new end Virtual Page Number.
+    pub fn shink_to(&mut self, page_table: &mut PageTable, new_end: VirtPageNum) {
+        assert!(
+            self.vpn_range.get_start() <= new_end && self.vpn_range.get_end() >= new_end,
+            "new_end {:?} should in self.vpn_range ({:?}, {:?})",
+            new_end,
+            self.vpn_range.get_start(),
+            self.vpn_range.get_end()
+        );
+        for vpn in VPNRange::new(new_end, self.vpn_range.get_end()) {
+            self.unmap_one(page_table, vpn);
+        }
+        self.vpn_range = VPNRange::new(self.vpn_range.get_start(), new_end);
+    }
+
+    #[allow(unused)]
+    // Append current memory area to new_end.
+    pub fn append_to(&mut self, page_table: &mut PageTable, new_end: VirtPageNum) {
+        assert!(
+            self.vpn_range.get_start() <= new_end && self.vpn_range.get_end() <= new_end,
+            "new_end {:?} should greater than self.vpn_range.get_end() {:?}",
+            new_end,
+            self.vpn_range.get_end()
+        );
+        for vpn in VPNRange::new(self.vpn_range.get_end(), new_end) {
+            self.map_one(page_table, vpn);
+        }
+        self.vpn_range = VPNRange::new(self.vpn_range.get_start(), new_end);
+    }
+
     /// data: start-aligned but maybe with shorter length
     /// assume that all frames were cleared before
     pub fn copy_data(&mut self, page_table: &PageTable, data: &[u8]) {

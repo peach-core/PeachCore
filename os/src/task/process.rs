@@ -9,6 +9,10 @@ use super::{
     TaskStruct,
 };
 use crate::{
+    config::{
+        PAGE_SIZE,
+        USER_STACK_TOP,
+    },
     fs::{
         File,
         OSInode,
@@ -19,6 +23,8 @@ use crate::{
     mm::{
         translated_refmut,
         MemorySet,
+        PTEFlags,
+        VirtAddr,
         KERNEL_SPACE,
     },
     sync::{
@@ -48,6 +54,12 @@ pub struct ProcessControlBlock {
     pub pid_handle: PidHandle,
     // mutable
     inner: UPIntrFreeCell<ProcessControlBlockInner>,
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub enum Privilege {
+    User,
+    Kernel,
 }
 
 #[rustfmt::skip]
@@ -85,6 +97,10 @@ pub struct ProcessControlBlockInner {
     pub mutex_list: Vec<Option<Arc<dyn Mutex>>>,
     pub semaphore_list: Vec<Option<Arc<Semaphore>>>,
     pub condvar_list: Vec<Option<Arc<Condvar>>>,
+
+    pub program_brk_bottom: usize,                          // user heap lowerbound.
+    pub current_heap_top: usize,                            // current upperbound os heap.
+    pub privilege: Privilege,                               // U-Mode Process or K-Mode Thread.
 }
 
 impl ProcessControlBlockInner {
@@ -121,6 +137,72 @@ impl ProcessControlBlockInner {
     pub fn get_cwd(&self) -> String {
         self.dir_struct.getcwd()
     }
+
+    pub fn change_program_brk(&mut self, size: isize) -> Option<usize> {
+        let old_brk = self.current_heap_top;
+        let new_brk = (self.current_heap_top as isize + size) as usize;
+        if new_brk < self.program_brk_bottom {
+            return None;
+        }
+        let result = if size == 0 {
+            true
+        } else if size < 0 {
+            self.memory_set.shink_to(
+                VirtAddr(self.program_brk_bottom).into(),
+                VirtAddr(new_brk as usize).ceil().into(),
+            )
+        } else {
+            self.memory_set.append_to(
+                VirtAddr(self.program_brk_bottom).into(),
+                VirtAddr(new_brk as usize).ceil().into(),
+            )
+        };
+
+        if result {
+            self.current_heap_top = new_brk as usize;
+            Some(old_brk)
+        } else {
+            None
+        }
+    }
+
+    pub fn current_task_mmap(&mut self, addr: usize, len: usize, prot: usize) -> isize {
+        bitflags! {
+            pub struct MmapProtect: u8{
+                const R = 1 << 0;
+                const W = 1 << 1;
+                const X = 1 << 2;
+            }
+        }
+
+        let prot_bit = MmapProtect::from_bits(prot as u8).unwrap();
+        let mut pte_flags = PTEFlags::empty();
+        if self.privilege == Privilege::User {
+            pte_flags |= PTEFlags::U;
+        }
+        if (prot_bit & MmapProtect::R) != MmapProtect::empty() {
+            pte_flags |= PTEFlags::R;
+        }
+        if (prot_bit & MmapProtect::W) != MmapProtect::empty() {
+            pte_flags |= PTEFlags::W;
+        }
+        if (prot_bit & MmapProtect::X) != MmapProtect::empty() {
+            pte_flags |= PTEFlags::X;
+        }
+        assert_eq!(prot >> 3, 0);
+        assert_eq!(addr & (PAGE_SIZE - 1), 0);
+        assert_eq!(len & (PAGE_SIZE - 1), 0);
+
+        let start_vaddr: VirtAddr = addr.into();
+        let end_vaddr: VirtAddr = (addr + len).into();
+
+        self.memory_set.mmap(start_vaddr, end_vaddr, pte_flags)
+    }
+
+    pub fn current_task_munmap(&mut self, addr: usize) -> isize {
+        assert_eq!(addr & (PAGE_SIZE - 1), 0);
+        self.memory_set.munmap(addr.into())
+    }
 }
 
 impl ProcessControlBlock {
@@ -130,7 +212,8 @@ impl ProcessControlBlock {
 
     pub fn new(elf_data: &[u8]) -> Arc<Self> {
         // memory_set with elf program headers/trampoline/trap context/user stack
-        let (memory_set, ustack_base, entry_point) = MemorySet::from_elf(elf_data);
+        let (memory_set, program_brk, entry_point) = MemorySet::from_elf(elf_data);
+        let ustack_base = USER_STACK_TOP;
         // allocate a pid
         let pid_handle = pid_alloc();
         let root_os_inode = Arc::new(OSInode::new(true, true, ROOT_INODE.clone()));
@@ -159,6 +242,9 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+                    program_brk_bottom: program_brk,
+                    current_heap_top: program_brk,
+                    privilege: Privilege::User,
                 })
             },
         });
@@ -217,6 +303,9 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+                    program_brk_bottom: 0,
+                    current_heap_top: 0,
+                    privilege: Privilege::Kernel,
                 })
             },
         });
@@ -248,19 +337,24 @@ impl ProcessControlBlock {
     pub fn exec(self: &Arc<Self>, elf_data: &[u8], args: Vec<String>) {
         assert_eq!(self.inner_exclusive_access().thread_count(), 1);
         // memory_set with elf program headers/trampoline/trap context/user stack
-        let (memory_set, ustack_base, entry_point) = MemorySet::from_elf(elf_data);
+        let (memory_set, program_brk, entry_point) = MemorySet::from_elf(elf_data);
         let new_token = memory_set.token();
+
         // substitute memory_set
         self.inner_exclusive_access().memory_set = memory_set;
+        self.inner_exclusive_access().program_brk_bottom = program_brk;
+        self.inner_exclusive_access().current_heap_top = program_brk;
+
         // then we alloc user resource for main thread again
         // since memory_set has been changed
         let task = self.inner_exclusive_access().get_task(0);
         let mut task_inner = task.inner_exclusive_access();
-        task_inner.res.as_mut().unwrap().ustack_base = ustack_base;
+        task_inner.res.as_mut().unwrap().ustack_base = USER_STACK_TOP;
         task_inner.res.as_mut().unwrap().alloc_user_res();
         task_inner.trap_ctx_ppn = task_inner.res.as_mut().unwrap().trap_ctx_ppn();
         // push arguments on user stack
         let mut user_sp = task_inner.res.as_mut().unwrap().ustack_top();
+
         user_sp -= (args.len() + 1) * core::mem::size_of::<usize>();
         let argv_base = user_sp;
         let mut argv: Vec<_> = (0..=args.len())
@@ -335,6 +429,9 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+                    program_brk_bottom: parent.program_brk_bottom,
+                    current_heap_top: parent.current_heap_top,
+                    privilege: Privilege::User,
                 })
             },
         });
@@ -380,9 +477,8 @@ impl ProcessControlBlock {
         0
     }
 
-    pub fn getcwd(& self) -> String {
-        self.inner
-            .exclusive_session(|inner| inner.get_cwd())
+    pub fn getcwd(&self) -> String {
+        self.inner.exclusive_session(|inner| inner.get_cwd())
     }
 
     // TODO
@@ -398,5 +494,19 @@ impl ProcessControlBlock {
     // TODO
     pub fn unlinkat(&self, _path: &str) -> isize {
         0
+    }
+
+    // memory syscall.
+    pub fn change_program_brk(&self, size: isize) -> Option<usize> {
+        let mut inner = self.inner_exclusive_access();
+        inner.change_program_brk(size)
+    }
+    pub fn current_task_mmap(&self, addr: usize, len: usize, prot: usize) -> isize {
+        let mut inner = self.inner_exclusive_access();
+        inner.current_task_mmap(addr, len, prot)
+    }
+    pub fn current_task_munmap(&self, addr: usize) -> isize {
+        let mut inner = self.inner_exclusive_access();
+        inner.current_task_munmap(addr)
     }
 }
