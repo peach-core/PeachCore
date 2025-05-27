@@ -135,7 +135,7 @@ run-inner: qemu-version-check build
 debug: qemu-version-check build
 	qemu-system-riscv64 $(QEMU_ARGS) -s -S
 
-debug-just-rebuild-os: qemu-version-check kernel
+debug-just-rebuild-os: qemu-version-check $(KERNEL_BIN)
 	qemu-system-riscv64 $(QEMU_ARGS) -s -S
 
 gdbserver: qemu-version-check build

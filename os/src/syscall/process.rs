@@ -144,9 +144,18 @@ pub fn sys_exec(path: __user<*const u8>, mut args: __user<*const usize>) -> isiz
     }
 }
 
+pub fn sys_wait4(pid: isize, exit_code_ptr: __user<*mut i32>) -> isize {
+    let mut ret = waitpid(pid, exit_code_ptr);
+    while ret == -2 {
+        sys_yield();
+        ret = waitpid(pid, exit_code_ptr);
+    }
+    ret
+}
+
 /// If there is not a child process whose pid is same as given, return -1.
 /// Else if there is a child process but it is still running, return -2.
-pub fn sys_wait4(pid: isize, exit_code_ptr: __user<*mut i32>) -> isize {
+fn waitpid(pid: isize, exit_code_ptr: __user<*mut i32>) -> isize {
     let process = current_process();
     // find a child process
 

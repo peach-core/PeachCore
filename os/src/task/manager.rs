@@ -12,6 +12,7 @@ use alloc::{
     sync::Arc,
 };
 use lazy_static::*;
+use log::info;
 
 pub struct TaskManager {
     ready_queue: VecDeque<Arc<TaskStruct>>,
