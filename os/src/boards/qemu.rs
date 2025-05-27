@@ -1,4 +1,4 @@
-pub const CLOCK_FREQ: usize = 100_000_000;
+pub const CLOCK_FREQ: usize = 10_000_000;
 pub const MEMORY_END: usize = 0x8800_0000;
 
 pub const MMIO: &[(usize, usize)] = &[

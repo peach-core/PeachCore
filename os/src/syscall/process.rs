@@ -39,8 +39,17 @@ pub fn sys_yield() -> isize {
     0
 }
 
-pub fn sys_get_time() -> isize {
-    get_time_ms() as isize
+pub fn sys_get_time(ts: __user<*const u8>, tz: i32) -> isize {
+    let ptr = ts.inner() as *mut u64;
+    let mut sec = translated_refmut(current_user_token(), __user::new(ptr));
+    let mut usec = translated_refmut(
+        current_user_token(),
+        __user::new(unsafe { ptr.add(8) }),
+    );
+    let t = get_time_ms();
+    *sec = (t / 1000) as u64;
+    *usec = 0;
+    0
 }
 
 pub fn sys_getpid() -> isize {

@@ -8,7 +8,7 @@
 - [ ] basic_getcwd  
     *partial*  
 - [x] basic_getpid  
-- [ ] basic_gettimeofday  
+- [x] basic_gettimeofday  
 - [ ] basic_mmap  
 - [ ] basic_munmap  
 - [ ] basic_openat  

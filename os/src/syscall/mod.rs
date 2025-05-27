@@ -40,7 +40,7 @@ pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
         call::NANOSLEEP => sys_sleep(args[0]),
         call::SCHED_YIELD => sys_yield(),
         call::KILL => sys_kill(args[0], args[1] as u32),
-        call::GETTIMEOFDAY => sys_get_time(),
+        call::GETTIMEOFDAY => sys_get_time(__user::new(args[0] as *const u8), args[1] as i32),
         call::GETPID => sys_getpid(),
         call::CLONE => sys_fork(),
         call::EXECVE => sys_exec(
