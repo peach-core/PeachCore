@@ -28,7 +28,6 @@ use alloc::{
     collections::BTreeMap,
     sync::Arc,
 };
-use log::info;
 use core::arch::asm;
 use lazy_static::*;
 use riscv::register::satp;

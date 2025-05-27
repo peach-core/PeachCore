@@ -12,7 +12,7 @@ pub const MMAP_SPACE_LOWER_BOUND: usize = 0x0002_0000_0000;
 fn main() -> i32 {
     let brk_bottom = sbrk(0);
     println!("brk_bottom = {:#x}", brk_bottom);
-    sbrk(128);
+    sbrk(brk_bottom + 128);
     let mut brk_top = sbrk(0);
     println!("current brk top = {:#x}", brk_top);
 
@@ -31,8 +31,9 @@ fn main() -> i32 {
         }
     }
 
-    sbrk(4096 * 6);
-    brk_top = sbrk(-(4096 * 6 + 128));
+    sbrk(brk_top + 4096 * 6);
+    brk_top = brk_top + 4096 * 6;
+    brk_top = sbrk(brk_top - (4096 * 6 + 128));
     println!("do sbrk(4096 * 6) ...\tcurrent brk top = {:#x}", brk_top);
     brk_top = sbrk(0);
     println!("release memory...\tcurrent brk top = {:#x}", brk_top);

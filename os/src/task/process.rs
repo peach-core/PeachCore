@@ -140,13 +140,13 @@ impl ProcessControlBlockInner {
 
     pub fn change_program_brk(&mut self, size: isize) -> Option<usize> {
         let old_brk = self.current_heap_top;
-        let new_brk = (self.current_heap_top as isize + size) as usize;
-        if new_brk < self.program_brk_bottom {
-            return None;
-        }
-        let result = if size == 0 {
-            true
-        } else if size < 0 {
+        let new_brk = size as usize;
+        
+        if size == 0 {
+            return Some(old_brk);
+        } 
+        
+        let result =  if new_brk < old_brk {
             self.memory_set.shink_to(
                 VirtAddr(self.program_brk_bottom).into(),
                 VirtAddr(new_brk as usize).ceil().into(),
