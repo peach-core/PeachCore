@@ -20,27 +20,11 @@ pub fn exec(path: &str, args: &[*const u8]) -> isize {
 }
 
 pub fn wait(exit_code: &mut i32) -> isize {
-    loop {
-        match sys_waitpid(-1, exit_code as *mut _) {
-            -2 => {
-                yield_();
-            }
-            // -1 or a real pid
-            exit_pid => return exit_pid,
-        }
-    }
+    sys_waitpid(-1, exit_code as *mut _)
 }
 
 pub fn waitpid(pid: usize, exit_code: &mut i32) -> isize {
-    loop {
-        match sys_waitpid(pid as isize, exit_code as *mut _) {
-            -2 => {
-                yield_();
-            }
-            // -1 or a real pid
-            exit_pid => return exit_pid,
-        }
-    }
+    sys_waitpid(pid as isize, exit_code as *mut _)
 }
 
 pub fn waitpid_nb(pid: usize, exit_code: &mut i32) -> isize {

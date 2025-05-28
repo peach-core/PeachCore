@@ -9,6 +9,11 @@ bitflags! {
     }
 }
 
+struct TimeVal {
+    sec: u64,  // 自 Unix 纪元起的秒数
+    usec: u64, // 微秒数
+}
+
 fn syscall(id: usize, args: [usize; 3]) -> isize {
     let mut ret: isize;
     unsafe {
@@ -81,7 +86,9 @@ pub fn sys_kill(pid: usize, signal: i32) -> isize {
 }
 
 pub fn sys_get_time() -> isize {
-    syscall(call::GETTIMEOFDAY, [0, 0, 0])
+    let mut time: TimeVal = TimeVal { sec: 0, usec: 0 };
+    syscall(call::GETTIMEOFDAY, [&mut time as *mut TimeVal as usize, 0, 0]);
+    return (time.sec as isize) * 1000;
 }
 
 pub fn sys_getpid() -> isize {

@@ -41,8 +41,8 @@ pub fn sys_yield() -> isize {
 
 pub fn sys_get_time(ts: __user<*const u8>, tz: i32) -> isize {
     let ptr = ts.inner() as *mut u64;
-    let mut sec = translated_refmut(current_user_token(), __user::new(ptr));
-    let mut usec = translated_refmut(
+    let sec = translated_refmut(current_user_token(), __user::new(ptr));
+    let usec = translated_refmut(
         current_user_token(),
         __user::new(unsafe { ptr.add(8) }),
     );
