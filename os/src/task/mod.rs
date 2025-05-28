@@ -96,7 +96,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     let process = task.process.upgrade().unwrap();
     let tid = task_inner.res.as_ref().unwrap().tid;
     // record exit code
-    task_inner.exit_code = Some(exit_code);
+    task_inner.exit_code = Some(exit_code << 8);
     task_inner.res = None;
     // here we do not remove the thread since we are still using the kstack
     // it will be deallocated when sys_waittid is called
@@ -124,7 +124,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
         // mark this process as a zombie process
         process_inner.is_zombie = true;
         // record exit code of main process
-        process_inner.exit_code = exit_code;
+        process_inner.exit_code = exit_code << 8;
 
         {
             // move all child processes under init process

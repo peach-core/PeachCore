@@ -39,13 +39,10 @@ pub fn sys_yield() -> isize {
     0
 }
 
-pub fn sys_get_time(ts: __user<*const u8>, tz: i32) -> isize {
+pub fn sys_get_time(ts: __user<*const u8>, _tz: i32) -> isize {
     let ptr = ts.inner() as *mut u64;
     let sec = translated_refmut(current_user_token(), __user::new(ptr));
-    let usec = translated_refmut(
-        current_user_token(),
-        __user::new(unsafe { ptr.add(8) }),
-    );
+    let usec = translated_refmut(current_user_token(), __user::new(unsafe { ptr.add(8) }));
     let t = get_time_ms();
     *sec = (t / 1000) as u64;
     *usec = 0;
@@ -190,7 +187,9 @@ fn waitpid(pid: isize, exit_code_ptr: __user<*mut i32>) -> isize {
         // ++++ temporarily access child PCB exclusively
         let exit_code = child.inner_exclusive_access().exit_code;
         // ++++ release child PCB
-        *translated_refmut(inner.memory_set.token(), exit_code_ptr) = exit_code;
+        if exit_code_ptr.inner() as usize != 0 {
+            *translated_refmut(inner.memory_set.token(), exit_code_ptr) = exit_code;
+        }
         found_pid as isize
     } else {
         -2

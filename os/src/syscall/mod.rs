@@ -27,15 +27,14 @@ use user_space::__user;
 
 pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
     match syscall_id {
+        // net
         call::DUP3 => sys_dup(args[0]),
         call::CONNECT => sys_connect(args[0] as _, args[1] as _, args[2] as _),
         call::LISTEN => sys_listen(args[0] as _),
         call::ACCEPT => sys_accept(args[0] as _),
-        call::OPENAT => sys_open(__user::new(args[0] as *const u8), args[1] as u32),
-        call::CLOSE => sys_close(args[0]),
-        call::PIPE2 => sys_pipe(__user::new(args[0] as *mut usize)),
-        call::READ => sys_read(args[0], __user::new(args[1] as *const u8), args[2]),
-        call::WRITE => sys_write(args[0], __user::new(args[1] as *const u8), args[2]),
+
+
+        // Process
         call::EXIT => sys_exit(args[0] as i32),
         call::NANOSLEEP => sys_sleep(args[0]),
         call::SCHED_YIELD => sys_yield(),
@@ -51,6 +50,8 @@ pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
         call::THREAD_CREATE => sys_thread_create(args[0], args[1]),
         call::GETTID => sys_gettid(),
         call::WAITID => sys_waittid(args[0]) as isize,
+        call::GETPPID => sys_getppid(),
+
         call::MUTEX_CREATE => sys_mutex_create(args[0] == 1),
         call::MUTEX_LOCK => sys_mutex_lock(args[0]),
         call::MUTEX_UNLOCK => sys_mutex_unlock(args[0]),
@@ -65,6 +66,13 @@ pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
         call::EVENT_GET => sys_event_get(),
         call::KEY_PRESSED => sys_key_pressed(),
 
+
+        // fs
+        call::OPENAT => sys_open(__user::new(args[0] as *const u8), args[1] as u32),
+        call::CLOSE => sys_close(args[0]),
+        call::PIPE2 => sys_pipe(__user::new(args[0] as *mut usize)),
+        call::READ => sys_read(args[0], __user::new(args[1] as *const u8), args[2]),
+        call::WRITE => sys_write(args[0], __user::new(args[1] as *const u8), args[2]),
         call::GETCWD => sys_getcwd(__user::new(args[0] as *const u8), args[1]),
         // TODO, only interface here.
         call::CHDIR => sys_chdir(__user::new(args[0] as *const u8)),
@@ -83,6 +91,8 @@ pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
             __user::new(args[3] as *const u8),
             args[4] as isize,
         ),
+
+        // Mem
         call::BRK => sys_brk(args[0] as isize),
         call::MMAP => sys_mmap(args[0], args[1], args[2]),
         call::MUNMAP => sys_munmap(args[0]),

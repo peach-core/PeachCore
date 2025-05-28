@@ -3,7 +3,7 @@
 - [x] basic_brk  
 - [x] basic_clone  
 - [ ] basic_dup  
-- [ ] basic_execve  
+- [x] basic_execve  
 - [x] basic_fork  
 - [ ] basic_getcwd  
     *partial*  
@@ -16,15 +16,15 @@
 - [x] basic_test_echo  
 - [ ] basic_umount  
 - [ ] basic_unlink  
-- [ ] basic_waitpid  
-- [ ] basic_yield  
+- [x] basic_waitpid  
+- [x] basic_yield  
 - [ ] basic_chdir  
 - [ ] basic_close  
 - [ ] basic_dup2  
 - [x] basic_exit  
 - [ ] basic_fstat  
 - [ ] basic_getdents  
-- [ ] basic_getppid  
+- [x] basic_getppid  
 - [ ] basic_mkdir_  
 - [ ] basic_mount  
 - [ ] basic_open  

@@ -90,3 +90,9 @@ pub fn sys_waittid(tid: usize) -> i32 {
         -2
     }
 }
+
+
+pub fn sys_getppid() -> isize {
+    let task = current_task().unwrap();
+    task.process.upgrade().unwrap().getpid() as isize
+}

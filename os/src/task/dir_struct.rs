@@ -17,7 +17,7 @@ pub struct DirStruct {
 }
 
 pub struct DirStructInner {
-    pub path: Path,
+    path: Path,
     // pub root: Path,
 }
 
