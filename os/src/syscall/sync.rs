@@ -1,4 +1,5 @@
 use crate::{
+    mm::translated_ref,
     sync::{
         Condvar,
         Mutex,
@@ -10,6 +11,7 @@ use crate::{
         block_current_and_run_next,
         current_process,
         current_task,
+        current_user_token,
     },
     timer::{
         add_timer,
@@ -17,9 +19,16 @@ use crate::{
     },
 };
 use alloc::sync::Arc;
+use log::info;
 
-pub fn sys_sleep(ms: usize) -> isize {
-    let expire_ms = get_time_ms() + ms;
+use super::{
+    user_space::__user,
+    TimeVal,
+};
+
+pub fn sys_nanosleep(time: __user<*const TimeVal>) -> isize {
+    let time = translated_ref(current_user_token(), time);
+    let expire_ms = get_time_ms() + (time.sec as usize) * 1000 + (time.usec as usize) / 1000;
     let task = current_task().unwrap();
     add_timer(expire_ms, task);
     block_current_and_run_next();

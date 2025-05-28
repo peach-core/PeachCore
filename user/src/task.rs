@@ -46,7 +46,11 @@ pub fn kill(pid: usize, signal: i32) -> isize {
 }
 
 pub fn sleep(sleep_ms: usize) {
-    sys_sleep(sleep_ms);
+    let time = TimeVal {
+        sec: (sleep_ms as u64) / 1000,
+        usec: (sleep_ms as u64 % 1000) * 1000,
+    };
+    sys_sleep(&time);
 }
 
 pub fn thread_create(entry: usize, arg: usize) -> isize {

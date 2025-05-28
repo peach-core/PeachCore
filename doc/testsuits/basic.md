@@ -29,7 +29,7 @@
 - [ ] basic_mount  
 - [ ] basic_open  
 - [ ] basic_pipe  
-- [ ] basic_sleep  
+- [x] basic_sleep  
 - [ ] basic_times  
 - [ ] basic_uname  
 - [x] basic_wait  

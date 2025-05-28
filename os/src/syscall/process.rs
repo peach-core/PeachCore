@@ -27,7 +27,7 @@ use alloc::{
     vec::Vec,
 };
 
-use super::user_space::__user;
+use super::{user_space::__user, TimeVal};
 
 pub fn sys_exit(exit_code: i32) -> ! {
     exit_current_and_run_next(exit_code);
@@ -39,7 +39,7 @@ pub fn sys_yield() -> isize {
     0
 }
 
-pub fn sys_get_time(ts: __user<*const u8>, _tz: i32) -> isize {
+pub fn sys_get_time(ts: __user<*mut TimeVal>, _tz: i32) -> isize {
     let ptr = ts.inner() as *mut u64;
     let sec = translated_refmut(current_user_token(), __user::new(ptr));
     let usec = translated_refmut(current_user_token(), __user::new(unsafe { ptr.add(8) }));

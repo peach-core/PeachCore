@@ -25,6 +25,12 @@ extern crate syscall_nr;
 use syscall_nr::call;
 use user_space::__user;
 
+pub struct TimeVal {
+    sec: u64,  // 自 Unix 纪元起的秒数
+    #[allow(unused)]
+    usec: u64, // 微秒数
+}
+
 pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
     match syscall_id {
         // net
@@ -33,13 +39,12 @@ pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
         call::LISTEN => sys_listen(args[0] as _),
         call::ACCEPT => sys_accept(args[0] as _),
 
-
         // Process
         call::EXIT => sys_exit(args[0] as i32),
-        call::NANOSLEEP => sys_sleep(args[0]),
+        call::NANOSLEEP => sys_nanosleep(__user::new(args[0] as *mut TimeVal)),
         call::SCHED_YIELD => sys_yield(),
         call::KILL => sys_kill(args[0], args[1] as u32),
-        call::GETTIMEOFDAY => sys_get_time(__user::new(args[0] as *const u8), args[1] as i32),
+        call::GETTIMEOFDAY => sys_get_time(__user::new(args[0] as *mut TimeVal), args[1] as i32),
         call::GETPID => sys_getpid(),
         call::CLONE => sys_fork(),
         call::EXECVE => sys_exec(
@@ -65,7 +70,6 @@ pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
         call::FRAMEBUFFER_FLUSH => sys_framebuffer_flush(),
         call::EVENT_GET => sys_event_get(),
         call::KEY_PRESSED => sys_key_pressed(),
-
 
         // fs
         call::OPENAT => sys_open(__user::new(args[0] as *const u8), args[1] as u32),

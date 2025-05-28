@@ -9,9 +9,10 @@ bitflags! {
     }
 }
 
-struct TimeVal {
-    sec: u64,  // 自 Unix 纪元起的秒数
-    usec: u64, // 微秒数
+pub struct TimeVal {
+    pub sec: u64,  // 自 Unix 纪元起的秒数
+    #[allow(dead_code)]
+    pub usec: u64, // 微秒数
 }
 
 fn syscall(id: usize, args: [usize; 3]) -> isize {
@@ -73,8 +74,8 @@ pub fn sys_exit(exit_code: i32) -> ! {
     panic!("sys_exit never returns!");
 }
 
-pub fn sys_sleep(sleep_ms: usize) -> isize {
-    syscall(call::NANOSLEEP, [sleep_ms, 0, 0])
+pub fn sys_sleep(time: &TimeVal) -> isize {
+    syscall(call::NANOSLEEP, [time as *const TimeVal as usize, 0, 0])
 }
 
 pub fn sys_yield() -> isize {
@@ -87,7 +88,10 @@ pub fn sys_kill(pid: usize, signal: i32) -> isize {
 
 pub fn sys_get_time() -> isize {
     let mut time: TimeVal = TimeVal { sec: 0, usec: 0 };
-    syscall(call::GETTIMEOFDAY, [&mut time as *mut TimeVal as usize, 0, 0]);
+    syscall(
+        call::GETTIMEOFDAY,
+        [&mut time as *mut TimeVal as usize, 0, 0],
+    );
     return (time.sec as isize) * 1000;
 }
 
