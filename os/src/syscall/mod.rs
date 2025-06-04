@@ -21,8 +21,8 @@ use process::*;
 use sync::*;
 use thread::*;
 #[allow(unused)]
-extern crate syscall_nr;
-use syscall_nr::call;
+extern crate shared_defination;
+use shared_defination::syscall_nr::call;
 use user_space::__user;
 
 pub struct TimeVal {

@@ -14,7 +14,7 @@ lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 embedded-graphics = "0.7.1"
 oorandom = "11"
 virtio-input-decoder = "0.1.4"
-syscall_nr = { path = "../syscall_nr" }
+shared_defination = { path = "../shared_defination" }
 
 [profile.release]
 debug = true

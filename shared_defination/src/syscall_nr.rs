@@ -1,5 +1,3 @@
-#![no_std]
-
 pub mod call {
     pub const IO_SETUP: usize = 0;
     pub const IO_DESTROY: usize = 1;

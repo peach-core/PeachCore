@@ -1,5 +1,5 @@
-extern crate syscall_nr;
-use syscall_nr::call;
+extern crate shared_defination;
+use shared_defination::syscall_nr::call;
 
 bitflags! {
     pub struct MapProtect: u8{
