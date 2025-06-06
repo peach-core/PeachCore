@@ -15,6 +15,7 @@ mod task;
 mod mm;
 
 extern crate alloc;
+extern crate core;
 #[macro_use]
 extern crate bitflags;
 

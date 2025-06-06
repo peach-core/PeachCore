@@ -25,8 +25,10 @@ extern crate shared_defination;
 use shared_defination::syscall_nr::call;
 use user_space::__user;
 
+use crate::sync::sys_futex;
+
 pub struct TimeVal {
-    sec: u64,  // 自 Unix 纪元起的秒数
+    sec: u64, // 自 Unix 纪元起的秒数
     #[allow(unused)]
     usec: u64, // 微秒数
 }
@@ -70,6 +72,15 @@ pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
         call::FRAMEBUFFER_FLUSH => sys_framebuffer_flush(),
         call::EVENT_GET => sys_event_get(),
         call::KEY_PRESSED => sys_key_pressed(),
+
+        call::FUTEX => sys_futex(
+            __user::new(args[0] as *mut u32),
+            args[1] as isize,
+            args[2] as u32,
+            args[3] as u32,
+            __user::new(args[4] as *mut u32),
+            args[5] as u32,
+        ),
 
         // fs
         call::OPENAT => sys_open(__user::new(args[0] as *const u8), args[1] as u32),

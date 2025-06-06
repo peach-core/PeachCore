@@ -12,6 +12,9 @@ pub fn mutex_lock(mutex_id: usize) {
 pub fn mutex_unlock(mutex_id: usize) {
     sys_mutex_unlock(mutex_id);
 }
+pub fn futex(uaddr: usize, futex_op: usize, val: usize) -> isize {
+    sys_futex(uaddr, futex_op, val, 0, 0, 0)
+}
 pub fn semaphore_create(res_count: usize) -> isize {
     sys_semaphore_create(res_count)
 }

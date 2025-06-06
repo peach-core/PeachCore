@@ -2,6 +2,7 @@ mod condvar;
 mod mutex;
 mod semaphore;
 mod up;
+mod futex;
 
 pub use condvar::Condvar;
 pub use mutex::{
@@ -14,3 +15,5 @@ pub use up::{
     UPIntrFreeCell,
     UPIntrRefMut,
 };
+
+pub use futex::sys_futex;

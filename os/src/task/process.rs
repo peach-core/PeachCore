@@ -4,6 +4,7 @@ use super::{
     id::RecycleAllocator,
     manager::insert_into_pid2process,
     pid_alloc,
+    wait_queue::WaitQueue,
     PidHandle,
     SignalFlags,
     TaskStruct,
@@ -40,6 +41,7 @@ use crate::{
     },
 };
 use alloc::{
+    collections::btree_map::BTreeMap,
     string::String,
     sync::{
         Arc,
@@ -101,6 +103,7 @@ pub struct ProcessControlBlockInner {
     pub program_brk_bottom: usize,                          // user heap lowerbound.
     pub current_heap_top: usize,                            // current upperbound os heap.
     pub privilege: Privilege,                               // U-Mode Process or K-Mode Thread.
+    pub futex_table: BTreeMap<usize, WaitQueue>,               // futex_list
 }
 
 impl ProcessControlBlockInner {
@@ -141,12 +144,12 @@ impl ProcessControlBlockInner {
     pub fn change_program_brk(&mut self, size: isize) -> Option<usize> {
         let old_brk = self.current_heap_top;
         let new_brk = size as usize;
-        
+
         if size == 0 {
             return Some(old_brk);
-        } 
-        
-        let result =  if new_brk < old_brk {
+        }
+
+        let result = if new_brk < old_brk {
             self.memory_set.shink_to(
                 VirtAddr(self.program_brk_bottom).into(),
                 VirtAddr(new_brk as usize).ceil().into(),
@@ -245,6 +248,7 @@ impl ProcessControlBlock {
                     program_brk_bottom: program_brk,
                     current_heap_top: program_brk,
                     privilege: Privilege::User,
+                    futex_table: BTreeMap::new(),
                 })
             },
         });
@@ -306,6 +310,7 @@ impl ProcessControlBlock {
                     program_brk_bottom: 0,
                     current_heap_top: 0,
                     privilege: Privilege::Kernel,
+                    futex_table: BTreeMap::new(),
                 })
             },
         });
@@ -432,6 +437,7 @@ impl ProcessControlBlock {
                     program_brk_bottom: parent.program_brk_bottom,
                     current_heap_top: parent.current_heap_top,
                     privilege: Privilege::User,
+                    futex_table: BTreeMap::new(),
                 })
             },
         });

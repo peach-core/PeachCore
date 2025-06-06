@@ -10,7 +10,7 @@ bitflags! {
 }
 
 pub struct TimeVal {
-    pub sec: u64,  // 自 Unix 纪元起的秒数
+    pub sec: u64, // 自 Unix 纪元起的秒数
     #[allow(dead_code)]
     pub usec: u64, // 微秒数
 }
@@ -136,6 +136,17 @@ pub fn sys_mutex_lock(id: usize) -> isize {
 
 pub fn sys_mutex_unlock(id: usize) -> isize {
     syscall(call::MUTEX_UNLOCK, [id, 0, 0])
+}
+
+pub fn sys_futex(
+    uaddr: usize,
+    futex_op: usize,
+    val: usize,
+    _val2: usize,
+    _uaddr2: usize,
+    _val3: usize,
+) -> isize {
+    syscall(call::FUTEX, [uaddr, futex_op, val])
 }
 
 pub fn sys_semaphore_create(res_count: usize) -> isize {

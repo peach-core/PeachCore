@@ -8,6 +8,7 @@ mod switch;
 #[allow(clippy::module_inception)]
 mod task;
 mod dir_struct;
+pub mod wait_queue;
 
 use self::id::TaskUserRes;
 use crate::{
@@ -96,7 +97,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     let process = task.process.upgrade().unwrap();
     let tid = task_inner.res.as_ref().unwrap().tid;
     // record exit code
-    task_inner.exit_code = Some(exit_code << 8);
+    task_inner.exit_code = Some(exit_code & (0xff));
     task_inner.res = None;
     // here we do not remove the thread since we are still using the kstack
     // it will be deallocated when sys_waittid is called
