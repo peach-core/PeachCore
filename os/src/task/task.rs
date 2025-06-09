@@ -13,6 +13,7 @@ use crate::{
         UPIntrFreeCell,
         UPIntrRefMut,
     },
+    timer::get_time,
     trap::TrapContext,
 };
 use alloc::sync::{
@@ -46,6 +47,10 @@ pub struct TaskControlBlockInner {
     pub task_ctx: TaskContext,
     pub task_status: TaskStatus,
     pub exit_code: Option<i32>,
+    //pub create_time: usize,
+    pub cpu_systime_accumulation: usize,
+    pub cpu_usrtime_accumulation: usize,
+    pub cpu_entry_time: usize,
 }
 
 impl TaskControlBlockInner {
@@ -56,6 +61,17 @@ impl TaskControlBlockInner {
     #[allow(unused)]
     fn get_status(&self) -> TaskStatus {
         self.task_status
+    }
+
+    #[allow(unused)]
+    pub fn accumulate_usrtime(&mut self) {
+        self.cpu_usrtime_accumulation += get_time() - self.cpu_entry_time;
+        self.cpu_entry_time = 0;
+    }
+    #[allow(unused)]
+    pub fn accumulate_systime(&mut self) {
+        self.cpu_systime_accumulation += get_time() - self.cpu_entry_time;
+        self.cpu_entry_time = 0;
     }
 }
 
@@ -77,6 +93,9 @@ impl TaskStruct {
                     task_ctx: TaskContext::goto_trap_return(kstack_top),
                     task_status: TaskStatus::Ready,
                     exit_code: None,
+                    cpu_usrtime_accumulation: 0,
+                    cpu_systime_accumulation: 0,
+                    cpu_entry_time: 0,
                 })
             },
         }
@@ -99,6 +118,9 @@ impl TaskStruct {
                     ),
                     task_status: TaskStatus::Ready,
                     exit_code: None,
+                    cpu_usrtime_accumulation: 0,
+                    cpu_systime_accumulation: 0,
+                    cpu_entry_time: 0,
                 })
             },
         }

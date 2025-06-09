@@ -69,6 +69,15 @@ impl MemorySet {
     pub fn token(&self) -> usize {
         self.page_table.token()
     }
+    pub fn translate_va(&self, address: usize) -> usize{
+        let virtual_address = VirtAddr(address);
+        if let Some(phy_addr) = self.page_table.translate_va(virtual_address){
+            phy_addr.0
+        }
+        else {
+            0
+        }
+    }
     /// Assume that no conflicts.
     pub fn insert_framed_area(
         &mut self, start_va: VirtAddr, end_va: VirtAddr, permission: MapPermission,

@@ -19,7 +19,6 @@ use crate::{
     },
 };
 use alloc::sync::Arc;
-use log::info;
 
 use super::{
     user_space::__user,

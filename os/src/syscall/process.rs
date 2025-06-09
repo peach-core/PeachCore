@@ -16,6 +16,7 @@ use crate::{
         current_user_token,
         exit_current_and_run_next,
         pid2process,
+        ProcessControlBlock,
         suspend_current_and_run_next,
         SignalFlags,
     },
@@ -25,6 +26,7 @@ use alloc::{
     string::String,
     sync::Arc,
     vec::Vec,
+    collections::VecDeque,
 };
 
 use super::{
@@ -218,4 +220,38 @@ pub fn sys_kill(pid: usize, signal: u32) -> isize {
     } else {
         -1
     }
+}
+
+pub fn sys_times(times: usize) -> isize {
+    let process = current_process();
+    let tms = (process.inner_exclusive_access().memory_set.translate_va(times)) as *mut [usize; 4];
+    for tcb in &(process.inner_exclusive_access().tasks) {
+        if let Some(task) = (*tcb).as_ref() {
+            let task_inner = task.inner_exclusive_access();
+            unsafe{
+                (*tms)[0] += task_inner.cpu_usrtime_accumulation;
+                (*tms)[1] += task_inner.cpu_systime_accumulation;
+            }
+        }
+    }
+    let mut child_pcb_vec:VecDeque<Arc<ProcessControlBlock>> = Default::default();
+    child_pcb_vec.push_back(process.clone());
+    loop {
+        if let Some(child_pcb) = child_pcb_vec.pop_front(){
+            for child_tcb in &(child_pcb.inner_exclusive_access().tasks) {
+                if let Some(task) = (*child_tcb).as_ref() {
+                    let task_inner = task.inner_exclusive_access();
+                    unsafe{
+                        (*tms)[2] += task_inner.cpu_usrtime_accumulation;
+                        (*tms)[3] += task_inner.cpu_systime_accumulation;
+                    }
+                }
+            }
+            for child_pcb_child in &(child_pcb.inner_exclusive_access().children) {
+                child_pcb_vec.push_back((*child_pcb_child).clone());
+            }
+        }
+        else {break;}
+    }
+    0
 }
