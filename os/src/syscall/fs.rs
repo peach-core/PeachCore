@@ -16,6 +16,7 @@ use crate::{
     },
 };
 use alloc::sync::Arc;
+use shared_defination::error::EINVAL;
 
 use super::user_space::__user;
 
@@ -59,7 +60,7 @@ pub fn sys_read(fd: usize, buf: __user<*const u8>, len: usize) -> isize {
     }
 }
 
-pub fn sys_open(path:__user< *const u8>, flags: u32) -> isize {
+pub fn sys_open(path: __user<*const u8>, flags: u32) -> isize {
     let process = current_process();
     let token = current_user_token();
     let path = translated_str(token, path);
@@ -109,6 +110,24 @@ pub fn sys_dup(fd: usize) -> isize {
     if inner.fd_table[fd].is_none() {
         return -1;
     }
+    let new_fd = inner.alloc_fd();
+    inner.fd_table[new_fd] = Some(Arc::clone(inner.fd_table[fd].as_ref().unwrap()));
+    new_fd as isize
+}
+
+pub fn sys_dup3(oldfd: usize, newfd: usize) -> isize {
+    let process = current_process();
+    let mut inner = process.inner_exclusive_access();
+    if oldfd == newfd {
+        return -(EINVAL as isize);
+    }
+    if oldfd >= inner.fd_table.len() {
+        return -1;
+    }
+    if inner.fd_table[oldfd].is_none() {
+        return -1;
+    }
+
     let new_fd = inner.alloc_fd();
     inner.fd_table[new_fd] = Some(Arc::clone(inner.fd_table[fd].as_ref().unwrap()));
     new_fd as isize

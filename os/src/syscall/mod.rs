@@ -36,7 +36,7 @@ pub struct TimeVal {
 pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
     match syscall_id {
         // net
-        call::DUP3 => sys_dup(args[0]),
+        call::DUP => sys_dup(args[0]),
         call::CONNECT => sys_connect(args[0] as _, args[1] as _, args[2] as _),
         call::LISTEN => sys_listen(args[0] as _),
         call::ACCEPT => sys_accept(args[0] as _),

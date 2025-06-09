@@ -9,6 +9,7 @@ mod switch;
 mod task;
 mod dir_struct;
 pub mod wait_queue;
+mod fd_table;
 
 use self::id::TaskUserRes;
 use crate::{
@@ -27,6 +28,7 @@ use log::trace;
 use manager::fetch_task;
 use process::ProcessControlBlock;
 use switch::__switch;
+use fd_table::*;
 
 pub use context::TaskContext;
 pub use id::{
