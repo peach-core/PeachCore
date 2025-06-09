@@ -9,6 +9,7 @@ use super::{
 use crate::{
     sync::UPIntrFreeCell,
     trap::TrapContext,
+    timer::get_time,
 };
 use alloc::sync::Arc;
 use core::arch::asm;
@@ -50,6 +51,7 @@ pub fn run_tasks() {
             // access coming task TCB exclusively
             let next_task_ctx_ptr = task.inner.exclusive_session(|task_inner| {
                 task_inner.task_status = TaskStatus::Running;
+                task_inner.cpu_entry_time = get_time();
                 &task_inner.task_ctx as *const TaskContext
             });
             processor.current = Some(task);

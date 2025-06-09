@@ -98,6 +98,9 @@ pub struct ProcessControlBlockInner {
     pub semaphore_list: Vec<Option<Arc<Semaphore>>>,
     pub condvar_list: Vec<Option<Arc<Condvar>>>,
 
+    pub children_exited_usrtime_accumulation: usize,
+    pub children_exited_systime_accumulation: usize,
+
     pub program_brk_bottom: usize,                          // user heap lowerbound.
     pub current_heap_top: usize,                            // current upperbound os heap.
     pub privilege: Privilege,                               // U-Mode Process or K-Mode Thread.
@@ -242,6 +245,8 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+                    children_exited_systime_accumulation: 0,
+                    children_exited_usrtime_accumulation: 0,
                     program_brk_bottom: program_brk,
                     current_heap_top: program_brk,
                     privilege: Privilege::User,
@@ -303,6 +308,8 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+                    children_exited_systime_accumulation: 0,
+                    children_exited_usrtime_accumulation: 0,
                     program_brk_bottom: 0,
                     current_heap_top: 0,
                     privilege: Privilege::Kernel,
@@ -429,6 +436,8 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+                    children_exited_systime_accumulation: 0,
+                    children_exited_usrtime_accumulation: 0,
                     program_brk_bottom: parent.program_brk_bottom,
                     current_heap_top: parent.current_heap_top,
                     privilege: Privilege::User,

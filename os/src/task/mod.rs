@@ -24,7 +24,7 @@ use alloc::{
 use lazy_static::*;
 use log::trace;
 use manager::fetch_task;
-use process::ProcessControlBlock;
+pub use process::ProcessControlBlock;
 use switch::__switch;
 
 pub use context::TaskContext;
@@ -80,6 +80,7 @@ pub fn suspend_current_and_run_next() {
 pub fn block_current_task() -> *mut TaskContext {
     let task = take_current_task().unwrap();
     let mut task_inner = task.inner_exclusive_access();
+    task_inner.accumulate_usrtime();
     task_inner.task_status = TaskStatus::Blocked;
     &mut task_inner.task_ctx as *mut TaskContext
 }
@@ -96,6 +97,9 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     let process = task.process.upgrade().unwrap();
     let tid = task_inner.res.as_ref().unwrap().tid;
     // record exit code
+    task_inner.accumulate_usrtime();
+    process.inner_exclusive_access().children_exited_systime_accumulation += task_inner.cpu_systime_accumulation;
+    process.inner_exclusive_access().children_exited_usrtime_accumulation += task_inner.cpu_usrtime_accumulation;
     task_inner.exit_code = Some(exit_code << 8);
     task_inner.res = None;
     // here we do not remove the thread since we are still using the kstack
