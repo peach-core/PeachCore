@@ -96,7 +96,7 @@ pub fn check_accept(port: u16, tcp_packet: &TCPPacket) -> Option<()> {
 pub fn accept_connection(_port: u16, tcp_packet: &TCPPacket, task: Arc<TaskStruct>) {
     let process = task.process.upgrade().unwrap();
     let mut inner = process.inner_exclusive_access();
-    let fd = inner.alloc_fd();
+    let fd = inner.alloc_fd(-1);
 
     let tcp_socket = TCP::new(
         tcp_packet.source_ip,

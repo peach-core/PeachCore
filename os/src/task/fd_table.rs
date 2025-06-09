@@ -1,3 +1,5 @@
+use core::{clone, ops::{Index, IndexMut}};
+
 use alloc::{
     collections::{
         btree_map::BTreeMap,
@@ -28,6 +30,25 @@ impl FdTable {
             manually_used: BTreeSet::new(),
             upper_bound: 0,
         }
+    }
+
+    pub fn clone(&self) -> Self {
+        let mut new = Self {
+            recycle: self.recycle.clone(),
+            table: BTreeMap::new(),
+            manually_used: self.manually_used.clone(),
+            upper_bound: self.upper_bound,
+        };
+
+        for (fd, val) in self.table.iter() {
+            if let Some(file) = val {
+                new.table.insert(*fd, Some(file.clone()));
+            } else {
+                new.table.insert(*fd, None);
+            }
+        }
+
+        new
     }
 
     /// alloc an free fd, set new_fd == -1 for any fd, or return fd.
@@ -70,6 +91,14 @@ impl FdTable {
         }
     }
 
+    pub fn get(&self, index: usize) -> &Option<Arc<dyn File + Send + Sync>> {
+        self.table.get(&index).unwrap()
+    }
+
+    pub fn get_mut(&mut self, index: usize) -> &mut Option<Arc<dyn File + Send + Sync>> {
+        self.table.get_mut(&index).unwrap()
+    }
+
     pub fn len(&self) -> usize {
         return self.table.len();
     }
@@ -79,5 +108,28 @@ impl FdTable {
         self.recycle.clear();
         self.table.clear();
         self.upper_bound = 0;
+    }
+
+    pub fn contains(&self, fd: usize) -> bool {
+        if let Some(f) = self.table.get(&fd) {
+            f.is_some()
+        }
+        else {
+            false
+        }
+    }
+}
+
+impl Index<usize> for FdTable {
+    type Output = Option<Arc<dyn File + Send + Sync>>;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.get(index)
+    }
+}
+
+impl IndexMut<usize> for FdTable {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        self.get_mut(index)
     }
 }

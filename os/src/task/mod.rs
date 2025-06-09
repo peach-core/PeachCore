@@ -28,7 +28,7 @@ use log::trace;
 use manager::fetch_task;
 use process::ProcessControlBlock;
 use switch::__switch;
-use fd_table::*;
+pub use fd_table::*;
 
 pub use context::TaskContext;
 pub use id::{

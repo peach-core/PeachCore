@@ -1,8 +1,8 @@
 # Basic Test
 
 - [x] basic_brk  
-- [x] basic_clone  
-- [ ] basic_dup  
+- [ ] basic_clone  
+- [x] basic_dup  
 - [x] basic_execve  
 - [x] basic_fork  
 - [ ] basic_getcwd  
@@ -20,7 +20,7 @@
 - [x] basic_yield  
 - [ ] basic_chdir  
 - [ ] basic_close  
-- [ ] basic_dup2  
+- [x] basic_dup2  
 - [x] basic_exit  
 - [ ] basic_fstat  
 - [ ] basic_getdents  

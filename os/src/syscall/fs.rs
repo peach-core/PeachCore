@@ -24,7 +24,7 @@ pub fn sys_write(fd: usize, buf: __user<*const u8>, len: usize) -> isize {
     let token = current_user_token();
     let process = current_process();
     let inner = process.inner_exclusive_access();
-    if fd >= inner.fd_table.len() {
+    if !inner.fd_table.contains(fd) {
         return -1;
     }
     if let Some(file) = &inner.fd_table[fd] {
@@ -44,7 +44,7 @@ pub fn sys_read(fd: usize, buf: __user<*const u8>, len: usize) -> isize {
     let token = current_user_token();
     let process = current_process();
     let inner = process.inner_exclusive_access();
-    if fd >= inner.fd_table.len() {
+    if !inner.fd_table.contains(fd) {
         return -1;
     }
     if let Some(file) = &inner.fd_table[fd] {
@@ -66,7 +66,7 @@ pub fn sys_open(path: __user<*const u8>, flags: u32) -> isize {
     let path = translated_str(token, path);
     if let Some(inode) = open_file(path.as_str(), OpenFlags::from_bits(flags).unwrap()) {
         let mut inner = process.inner_exclusive_access();
-        let fd = inner.alloc_fd();
+        let fd = inner.alloc_fd(-1);
         inner.fd_table[fd] = Some(inode);
         fd as isize
     } else {
@@ -92,9 +92,9 @@ pub fn sys_pipe(pipe: __user<*mut usize>) -> isize {
     let token = current_user_token();
     let mut inner = process.inner_exclusive_access();
     let (pipe_read, pipe_write) = make_pipe();
-    let read_fd = inner.alloc_fd();
+    let read_fd = inner.alloc_fd(-1);
     inner.fd_table[read_fd] = Some(pipe_read);
-    let write_fd = inner.alloc_fd();
+    let write_fd = inner.alloc_fd(-1);
     inner.fd_table[write_fd] = Some(pipe_write);
     *translated_refmut(token, pipe) = read_fd;
     *translated_refmut(token, unsafe { pipe.inner().add(1).into() }) = write_fd;
@@ -110,12 +110,13 @@ pub fn sys_dup(fd: usize) -> isize {
     if inner.fd_table[fd].is_none() {
         return -1;
     }
-    let new_fd = inner.alloc_fd();
+    let new_fd = inner.alloc_fd(-1);
     inner.fd_table[new_fd] = Some(Arc::clone(inner.fd_table[fd].as_ref().unwrap()));
     new_fd as isize
 }
 
-pub fn sys_dup3(oldfd: usize, newfd: usize) -> isize {
+#[allow(unused)]
+pub fn sys_dup3(oldfd: usize, newfd: usize, _flag: usize) -> isize {
     let process = current_process();
     let mut inner = process.inner_exclusive_access();
     if oldfd == newfd {
@@ -128,7 +129,7 @@ pub fn sys_dup3(oldfd: usize, newfd: usize) -> isize {
         return -1;
     }
 
-    let new_fd = inner.alloc_fd();
-    inner.fd_table[new_fd] = Some(Arc::clone(inner.fd_table[fd].as_ref().unwrap()));
+    let new_fd = inner.alloc_fd(newfd as isize);
+    inner.fd_table[new_fd] = Some(Arc::clone(inner.fd_table[oldfd].as_ref().unwrap()));
     new_fd as isize
 }

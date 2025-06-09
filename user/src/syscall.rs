@@ -30,7 +30,7 @@ fn syscall(id: usize, args: [usize; 3]) -> isize {
 }
 
 pub fn sys_dup(fd: usize) -> isize {
-    syscall(call::DUP3, [fd, 0, 0])
+    syscall(call::DUP, [fd, 0, 0])
 }
 
 pub fn sys_connect(dest: u32, sport: u16, dport: u16) -> isize {

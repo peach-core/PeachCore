@@ -35,6 +35,10 @@ use crate::{
         UPIntrFreeCell,
         UPIntrRefMut,
     },
+    task::fd_table::{
+        self,
+        FdTable,
+    },
     trap::{
         trap_handler,
         TrapContext,
@@ -94,7 +98,7 @@ pub struct ProcessControlBlockInner {
     //                     Resources
     // =====================================================
     pub memory_set: MemorySet,                              // memory space
-    pub fd_table: Vec<Option<Arc<dyn File + Send + Sync>>>, // file description
+    pub fd_table: FdTable, // file description
     pub signals: SignalFlags,                               // signals
     pub mutex_list: Vec<Option<Arc<dyn Mutex>>>,
     pub semaphore_list: Vec<Option<Arc<Semaphore>>>,
@@ -112,13 +116,13 @@ impl ProcessControlBlockInner {
         self.memory_set.token()
     }
 
-    pub fn alloc_fd(&mut self) -> usize {
-        if let Some(fd) = (0..self.fd_table.len()).find(|fd| self.fd_table[*fd].is_none()) {
-            fd
-        } else {
-            self.fd_table.push(None);
-            self.fd_table.len() - 1
-        }
+    // newfd = -1 for random fd. IF newfd is assigned, this call will panic.
+    pub fn alloc_fd(&mut self, newfd: isize) -> usize {
+        self.fd_table.alloc_fd(newfd).unwrap()
+    }
+
+    pub fn dealloc_fd(&mut self, oldfd: usize) {
+        self.fd_table.dealloc_fd(oldfd)
     }
 
     pub fn alloc_tid(&mut self) -> usize {
@@ -221,6 +225,20 @@ impl ProcessControlBlock {
         let pid_handle = pid_alloc();
         let root_os_inode = Arc::new(OSInode::new(true, true, ROOT_INODE.clone()));
 
+        let mut fd_table = FdTable::new();
+        let mut files: Vec<Option<Arc<dyn File + Send + Sync>>> = vec![
+            // 0 -> stdin
+            Some(Arc::new(Stdin)),
+            // 1 -> stdout
+            Some(Arc::new(Stdout)),
+            // 2 -> stderr
+            Some(Arc::new(Stdout)),
+        ];
+        for i in 0..3 {
+            fd_table.alloc_fd(-1).unwrap();
+            fd_table[i] = files[i].take();
+        }
+
         let process = Arc::new(Self {
             pid_handle,
             inner: unsafe {
@@ -230,14 +248,7 @@ impl ProcessControlBlock {
                     parent: None,
                     children: Vec::new(),
                     exit_code: 0,
-                    fd_table: vec![
-                        // 0 -> stdin
-                        Some(Arc::new(Stdin)),
-                        // 1 -> stdout
-                        Some(Arc::new(Stdout)),
-                        // 2 -> stderr
-                        Some(Arc::new(Stdout)),
-                    ],
+                    fd_table: fd_table,
                     dir_struct: Arc::new(DirStruct::new(&root_os_inode)),
                     signals: SignalFlags::empty(),
                     tasks: Vec::new(),
@@ -283,6 +294,20 @@ impl ProcessControlBlock {
         let ustack_base = user_stack_upper_bound;
         let root_os_inode = Arc::new(OSInode::new(true, true, ROOT_INODE.clone()));
 
+        let mut fd_table = FdTable::new();
+        let mut files: Vec<Option<Arc<dyn File + Send + Sync>>> = vec![
+            // 0 -> stdin
+            Some(Arc::new(Stdin)),
+            // 1 -> stdout
+            Some(Arc::new(Stdout)),
+            // 2 -> stderr
+            Some(Arc::new(Stdout)),
+        ];
+        for i in 0..3 {
+            fd_table.alloc_fd(-1).unwrap();
+            fd_table[i] = files[i].take();
+        }
+
         let process = Arc::new(Self {
             pid_handle,
             inner: unsafe {
@@ -292,14 +317,7 @@ impl ProcessControlBlock {
                     parent: None,
                     children: Vec::new(),
                     exit_code: 0,
-                    fd_table: vec![
-                        // 0 -> stdin
-                        Some(Arc::new(Stdin)),
-                        // 1 -> stdout
-                        Some(Arc::new(Stdout)),
-                        // 2 -> stderr
-                        Some(Arc::new(Stdout)),
-                    ],
+                    fd_table: fd_table,
                     dir_struct: Arc::new(DirStruct::new(&root_os_inode)),
                     signals: SignalFlags::empty(),
                     tasks: Vec::new(),
@@ -405,14 +423,8 @@ impl ProcessControlBlock {
         // alloc a pid
         let pid = pid_alloc();
         // copy fd table
-        let mut new_fd_table: Vec<Option<Arc<dyn File + Send + Sync>>> = Vec::new();
-        for fd in parent.fd_table.iter() {
-            if let Some(file) = fd {
-                new_fd_table.push(Some(file.clone()));
-            } else {
-                new_fd_table.push(None);
-            }
-        }
+        let mut new_fd_table = FdTable::clone(&parent.fd_table);
+
         // copy dir_struct.
         let dir = DirStruct::new(&parent.dir_struct.get_current_inode());
 
