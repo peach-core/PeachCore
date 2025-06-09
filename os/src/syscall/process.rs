@@ -27,7 +27,10 @@ use alloc::{
     vec::Vec,
 };
 
-use super::{user_space::__user, TimeVal};
+use super::{
+    user_space::__user,
+    TimeVal,
+};
 
 pub fn sys_exit(exit_code: i32) -> ! {
     exit_current_and_run_next(exit_code);
@@ -110,7 +113,9 @@ pub fn sys_linkat(
     0
 }
 
-pub fn sys_fork() -> isize {
+pub fn sys_fork(
+    _flags: usize, stack: usize, _ptid: __user<*const u8>, _tls: __user<*const u8>, _ctid: usize,
+) -> isize {
     let current_process = current_process();
     let new_process = current_process.fork();
     let new_pid = new_process.getpid();
@@ -121,6 +126,11 @@ pub fn sys_fork() -> isize {
     // we do not have to move to next instruction since we have done it before
     // for child process, fork returns 0
     trap_ctx.x[10] = 0;
+
+    if stack != 0 {
+        trap_ctx.x[2] = stack;
+    }
+
     new_pid as isize
 }
 

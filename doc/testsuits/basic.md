@@ -1,7 +1,7 @@
 # Basic Test
 
 - [x] basic_brk  
-- [ ] basic_clone  
+- [x] basic_clone  
 - [x] basic_dup  
 - [x] basic_execve  
 - [x] basic_fork  
