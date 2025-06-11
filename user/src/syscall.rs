@@ -87,7 +87,7 @@ pub fn sys_kill(pid: usize, signal: i32) -> isize {
 }
 
 pub fn sys_times(tms: *mut [usize;4]) -> isize {
-    syscall(SYSCALL_TIMES, [tms as usize, 0, 0])
+    syscall(call::TIMES, [tms as usize, 0, 0])
 }
 
 pub fn sys_get_time() -> isize {
