@@ -228,12 +228,14 @@ pub fn sys_times(times: usize) -> isize {
     child_pcb_vec.push_back(process.clone());
     loop {
         if let Some(child_pcb) = child_pcb_vec.pop_front(){
-            for child_tcb in &(child_pcb.inner_exclusive_access().tasks) {
-                if let Some(task) = (*child_tcb).as_ref() {
-                    let task_inner = task.inner_exclusive_access();
-                    unsafe{
-                        (*tms)[2] += task_inner.cpu_usrtime_accumulation;
-                        (*tms)[3] += task_inner.cpu_systime_accumulation;
+            if child_pcb.pid_handle.0 != current_process().pid_handle.0 {
+                for child_tcb in &(child_pcb.inner_exclusive_access().tasks) {
+                    if let Some(task) = (*child_tcb).as_ref() {
+                        let task_inner = task.inner_exclusive_access();
+                        unsafe{
+                            (*tms)[2] += task_inner.cpu_usrtime_accumulation;
+                            (*tms)[3] += task_inner.cpu_systime_accumulation;
+                        }
                     }
                 }
             }
@@ -243,5 +245,6 @@ pub fn sys_times(times: usize) -> isize {
         }
         else {break;}
     }
+
     0
 }

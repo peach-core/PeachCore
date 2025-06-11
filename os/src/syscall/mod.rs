@@ -20,6 +20,7 @@ use net::*;
 use process::*;
 use sync::*;
 use thread::*;
+use crate::{task::current_task,timer::get_time};
 #[allow(unused)]
 extern crate shared_defination;
 use shared_defination::syscall_nr::call;
@@ -32,7 +33,12 @@ pub struct TimeVal {
 }
 
 pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
-    match syscall_id {
+    if let Some(current_tcb) = current_task(){
+        let mut tcb_inner=current_tcb.inner_exclusive_access();
+        tcb_inner.accumulate_usrtime();
+        tcb_inner.cpu_entry_time = get_time();
+    }
+    let re = match syscall_id {
         // net
         call::DUP3 => sys_dup(args[0]),
         call::CONNECT => sys_connect(args[0] as _, args[1] as _, args[2] as _),
@@ -103,5 +109,11 @@ pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
         call::MUNMAP => sys_munmap(args[0]),
 
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
+    };
+    if let Some(current_tcb) = current_task(){
+        let mut tcb_inner=current_tcb.inner_exclusive_access();
+        tcb_inner.accumulate_systime();
+        tcb_inner.cpu_entry_time = get_time();
     }
+    re
 }
