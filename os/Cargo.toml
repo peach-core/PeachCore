@@ -21,8 +21,6 @@ tinybmp = "0.3.1"
 log = "0.4"
 sbi-rt = { version = "0.0.2", features = ["legacy"] }
 syscall_nr = {path = "../syscall_nr"}
-redoxfs = { version = "0.6.11", default-features = false }
-redox_syscall = "0.5.12"
-
+redoxfs = { git = "https://github.com/tsukinaha/redoxfs.git", default-features = false }
 [profile.release]
 debug = true

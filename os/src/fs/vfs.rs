@@ -14,7 +14,7 @@ pub trait Inode: Send + Sync + 'static {
     fn ls(&self) -> Vec<String>;
 
     fn find(&self, name: &str) -> Option<Arc<Self>>;
-
+ 
     fn create(&self, name: &str) -> Option<Arc<Self>>;
 }
 
