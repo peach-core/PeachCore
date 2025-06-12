@@ -1,13 +1,13 @@
 use crate::syscall::user_space::__user;
 
 use super::{
-    frame_alloc,
     FrameTracker,
     PhysAddr,
     PhysPageNum,
     StepByOne,
     VirtAddr,
     VirtPageNum,
+    frame_alloc,
 };
 use alloc::{
     string::String,
@@ -124,13 +124,13 @@ impl PageTable {
     #[allow(unused)]
     pub fn map(&mut self, vpn: VirtPageNum, ppn: PhysPageNum, flags: PTEFlags) {
         let pte = self.find_pte_create(vpn).unwrap();
-        assert!(!pte.is_valid(), "vpn {:?} is mapped before mapping", vpn);
+        assert!(!pte.is_valid(), "vpn {vpn:?} is mapped before mapping");
         *pte = PageTableEntry::new(ppn, flags | PTEFlags::V);
     }
     #[allow(unused)]
     pub fn unmap(&mut self, vpn: VirtPageNum) {
         let pte = self.find_pte(vpn).unwrap();
-        assert!(pte.is_valid(), "vpn {:?} is invalid before unmapping", vpn);
+        assert!(pte.is_valid(), "vpn {vpn:?} is invalid before unmapping");
         *pte = PageTableEntry::empty();
     }
     pub fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
@@ -149,7 +149,9 @@ impl PageTable {
     }
 }
 
-pub fn translated_byte_buffer(token: usize, ptr: __user<*const u8>, len: usize) -> Vec<&'static mut [u8]> {
+pub fn translated_byte_buffer(
+    token: usize, ptr: __user<*const u8>, len: usize,
+) -> Vec<&'static mut [u8]> {
     let page_table = PageTable::from_token(token);
     let mut start = ptr.inner() as usize;
     let end = start + len;

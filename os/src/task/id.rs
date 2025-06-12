@@ -8,10 +8,10 @@ use crate::{
         USER_STACK_SIZE,
     },
     mm::{
+        KERNEL_SPACE,
         MapPermission,
         PhysPageNum,
         VirtAddr,
-        KERNEL_SPACE,
     },
     sync::UPIntrFreeCell,
 };
@@ -47,9 +47,8 @@ impl RecycleAllocator {
     pub fn dealloc(&mut self, id: usize) {
         assert!(id < self.current);
         assert!(
-            !self.recycled.iter().any(|i| *i == id),
-            "id {} has been deallocated!",
-            id
+            !self.recycled.contains(&id),
+            "id {id} has been deallocated!"
         );
         self.recycled.push(id);
     }
@@ -160,17 +159,15 @@ impl TaskUserRes {
         task_user_res
     }
 
-    pub fn new_kpthread(
-        process: Arc<ProcessControlBlock>, ustack_base: usize
-    ) -> Self {
+    pub fn new_kpthread(process: Arc<ProcessControlBlock>, ustack_base: usize) -> Self {
         let tid = process.inner_exclusive_access().alloc_tid();
-        let task_user_res = Self {
+        
+        Self {
             tid,
             ustack_base,
             process: Arc::downgrade(&process),
             is_kpthread: true,
-        };
-        task_user_res
+        }
     }
 
     pub fn alloc_user_res(&self) {

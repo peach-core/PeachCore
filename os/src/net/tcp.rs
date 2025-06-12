@@ -1,9 +1,9 @@
 use alloc::vec;
 use lose_net_stack::{
-    packets::tcp::TCPPacket,
     IPv4,
     MacAddress,
     TcpFlags,
+    packets::tcp::TCPPacket,
 };
 
 use crate::{
@@ -12,6 +12,7 @@ use crate::{
 };
 
 use super::{
+    LOSE_NET_STACK,
     net_interrupt_handler,
     socket::{
         add_socket,
@@ -19,7 +20,6 @@ use super::{
         pop_data,
         remove_socket,
     },
-    LOSE_NET_STACK,
 };
 
 // add tcp packet info to this structure

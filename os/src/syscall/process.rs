@@ -1,23 +1,23 @@
 use crate::{
     fs::{
-        open_file,
         OpenFlags,
+        open_file,
     },
     mm::{
+        UserBuffer,
         translated_byte_buffer,
         translated_ref,
         translated_refmut,
         translated_str,
-        UserBuffer,
     },
     task::{
+        SignalFlags,
         current_process,
         current_task,
         current_user_token,
         exit_current_and_run_next,
         pid2process,
         suspend_current_and_run_next,
-        SignalFlags,
     },
     timer::get_time_ms,
 };
@@ -58,13 +58,13 @@ pub fn sys_getcwd(buf: __user<*const u8>, buf_len: usize) -> isize {
 
     for (index, ch) in user_buf.into_iter().enumerate() {
         if index == cwd.len() {
-            unsafe { ch.write('\0' as u8) };
+            unsafe { ch.write(b'\0') };
             return buf.inner() as isize;
         }
         unsafe { ch.write(cwd.as_bytes()[index]) };
     }
 
-    return 0;
+    0
 }
 
 pub fn sys_chdir(path: __user<*const u8>) -> isize {

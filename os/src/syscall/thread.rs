@@ -1,13 +1,13 @@
 use crate::{
     mm::kernel_token,
     task::{
+        TaskStruct,
         add_task,
         current_task,
-        TaskStruct,
     },
     trap::{
-        trap_handler,
         TrapContext,
+        trap_handler,
     },
 };
 use alloc::sync::Arc;
@@ -45,7 +45,7 @@ pub fn sys_thread_create(entry: usize, arg: usize) -> isize {
         new_task.kstack.get_top(),
         trap_handler as usize,
     );
-    (*new_task_trap_ctx).x[10] = arg;
+    new_task_trap_ctx.x[10] = arg;
     new_task_tid as isize
 }
 

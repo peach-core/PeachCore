@@ -18,18 +18,23 @@ pub const VIRTGPU_XRES: u32 = 1280;
 #[allow(unused)]
 pub const VIRTGPU_YRES: u32 = 800;
 
-use crate::drivers::{
-    block::BLOCK_DEVICE,
-    chardev::{
-        CharDevice,
-        UART,
+use crate::{
+    drivers::{
+        KEYBOARD_DEVICE,
+        MOUSE_DEVICE,
+        chardev::{
+            CharDevice,
+            UART,
+        },
+        plic::{
+            IntrTargetPriority,
+            PLIC,
+        },
     },
-    plic::{
-        IntrTargetPriority,
-        PLIC,
+    fs::{
+        BlockDevice,
+        SysBlockDevice,
     },
-    KEYBOARD_DEVICE,
-    MOUSE_DEVICE,
 };
 
 pub fn device_init() {
@@ -56,7 +61,7 @@ pub fn irq_handler() {
     match intr_src_id {
         5 => KEYBOARD_DEVICE.handle_irq(),
         6 => MOUSE_DEVICE.handle_irq(),
-        8 => BLOCK_DEVICE.handle_irq(),
+        8 => SysBlockDevice::instance().handle_irq(),
         10 => UART.handle_irq(),
         _ => panic!("unsupported IRQ {}", intr_src_id),
     }

@@ -1,5 +1,4 @@
 use super::{
-    frame_alloc,
     FrameTracker,
     PTEFlags,
     PageTable,
@@ -10,6 +9,7 @@ use super::{
     VPNRange,
     VirtAddr,
     VirtPageNum,
+    frame_alloc,
 };
 use crate::{
     config::{
@@ -33,7 +33,7 @@ use core::arch::asm;
 use lazy_static::*;
 use riscv::register::satp;
 
-extern "C" {
+unsafe extern "C" {
     fn stext();
     fn etext();
     fn srodata();
@@ -175,8 +175,8 @@ impl MemorySet {
         for pair in MMIO {
             memory_set.push(
                 MapArea::new(
-                    (*pair).0.into(),
-                    ((*pair).0 + (*pair).1).into(),
+                    pair.0.into(),
+                    (pair.0 + pair.1).into(),
                     MapType::Identical,
                     MapPermission::R | MapPermission::W,
                 ),
@@ -251,7 +251,7 @@ impl MemorySet {
 
         (
             memory_set,
-            user_stack_top.into(),
+            user_stack_top,
             elf.header.pt2.entry_point() as usize,
         )
     }
@@ -285,7 +285,7 @@ impl MemorySet {
         let program_brk_vaddr: VirtAddr = (ekernel as usize + PAGE_SIZE).into();
         let _program_brk: VirtAddr = program_brk_vaddr.ceil().into();
 
-        (memory_set, kernel_thread_user_stack_top.into())
+        (memory_set, kernel_thread_user_stack_top)
     }
 
     pub fn from_existed_user(user_space: &MemorySet) -> MemorySet {
@@ -434,20 +434,26 @@ pub fn remap_test() {
     let mid_text: VirtAddr = ((stext as usize + etext as usize) / 2).into();
     let mid_rodata: VirtAddr = ((srodata as usize + erodata as usize) / 2).into();
     let mid_data: VirtAddr = ((sdata as usize + edata as usize) / 2).into();
-    assert!(!kernel_space
-        .page_table
-        .translate(mid_text.floor())
-        .unwrap()
-        .writable(),);
-    assert!(!kernel_space
-        .page_table
-        .translate(mid_rodata.floor())
-        .unwrap()
-        .writable(),);
-    assert!(!kernel_space
-        .page_table
-        .translate(mid_data.floor())
-        .unwrap()
-        .executable(),);
+    assert!(
+        !kernel_space
+            .page_table
+            .translate(mid_text.floor())
+            .unwrap()
+            .writable(),
+    );
+    assert!(
+        !kernel_space
+            .page_table
+            .translate(mid_rodata.floor())
+            .unwrap()
+            .writable(),
+    );
+    assert!(
+        !kernel_space
+            .page_table
+            .translate(mid_data.floor())
+            .unwrap()
+            .executable(),
+    );
     println!("remap_test passed!");
 }

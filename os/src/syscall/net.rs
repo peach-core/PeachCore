@@ -1,14 +1,14 @@
 use crate::{
     net::{
+        IPv4,
         net_interrupt_handler,
         port_table::{
+            PortFd,
             accept,
             listen,
             port_acceptable,
-            PortFd,
         },
         udp::UDP,
-        IPv4,
     },
     task::{
         current_process,

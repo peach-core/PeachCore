@@ -1,10 +1,10 @@
 use super::UPIntrFreeCell;
 use crate::task::{
+    TaskStruct,
     block_current_and_run_next,
     current_task,
     suspend_current_and_run_next,
     wakeup_task,
-    TaskStruct,
 };
 use alloc::{
     collections::VecDeque,

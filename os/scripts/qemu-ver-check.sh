@@ -13,7 +13,12 @@ then
     exit 1
 else
     QEMU_VERSION=$($1 --version|head -n 1|awk '{print $4}')
-    MAJOR_VERSION=$(echo $QEMU_VERSION|cut -c1-1)
+    if [[ $QEMU_VERSION =~ ([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+        MAJOR_VERSION=${BASH_REMATCH[1]}
+    else 
+        echo "${RED}Error: Unable to parse QEMU version from output: $QEMU_VERSION${NC}"
+        exit 1
+    fi
     if [ $MAJOR_VERSION -lt $MINIMUM_MAJOR_VERSION ]
     then
         echo "${RED}Error: Required major version of QEMU is ${MINIMUM_MAJOR_VERSION}, " \

@@ -1,7 +1,7 @@
 use riscv::register::sstatus::{
     self,
-    Sstatus,
     SPP,
+    Sstatus,
 };
 
 #[repr(C)]

@@ -1,14 +1,14 @@
 use crate::{
     fs::{
+        OpenFlags,
         make_pipe,
         open_file,
-        OpenFlags,
     },
     mm::{
+        UserBuffer,
         translated_byte_buffer,
         translated_refmut,
         translated_str,
-        UserBuffer,
     },
     task::{
         current_process,
@@ -59,7 +59,7 @@ pub fn sys_read(fd: usize, buf: __user<*const u8>, len: usize) -> isize {
     }
 }
 
-pub fn sys_open(path:__user< *const u8>, flags: u32) -> isize {
+pub fn sys_open(path: __user<*const u8>, flags: u32) -> isize {
     let process = current_process();
     let token = current_user_token();
     let path = translated_str(token, path);

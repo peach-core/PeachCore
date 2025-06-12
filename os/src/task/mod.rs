@@ -1,4 +1,5 @@
 mod context;
+mod dir_struct;
 mod id;
 mod manager;
 mod process;
@@ -7,13 +8,12 @@ mod signal;
 mod switch;
 #[allow(clippy::module_inception)]
 mod task;
-mod dir_struct;
 
 use self::id::TaskUserRes;
 use crate::{
     fs::{
-        open_file,
         OpenFlags,
+        open_file,
     },
     sbi::shutdown,
 };
@@ -29,11 +29,11 @@ use switch::__switch;
 
 pub use context::TaskContext;
 pub use id::{
-    kstack_alloc,
-    pid_alloc,
+    IDLE_PID,
     KernelStack,
     PidHandle,
-    IDLE_PID,
+    kstack_alloc,
+    pid_alloc,
 };
 pub use manager::{
     add_task,

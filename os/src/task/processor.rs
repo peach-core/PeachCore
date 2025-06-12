@@ -1,10 +1,10 @@
 use super::{
     __switch,
-    fetch_task,
     ProcessControlBlock,
     TaskContext,
     TaskStatus,
     TaskStruct,
+    fetch_task,
 };
 use crate::{
     sync::UPIntrFreeCell,

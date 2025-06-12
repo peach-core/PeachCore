@@ -10,10 +10,10 @@ use alloc::{
     vec,
 };
 use lose_net_stack::{
-    results::Packet,
     LoseStack,
     MacAddress,
     TcpFlags,
+    results::Packet,
 };
 
 use crate::{
@@ -134,7 +134,7 @@ pub fn hexdump(data: &[u8]) {
         for i in 0..16 {
             if offset + i < data.len() {
                 let c = data[offset + i];
-                if c >= 0x20 && c <= 0x7e {
+                if (0x20..=0x7e).contains(&c) {
                     print!("{}", c as char);
                 } else {
                     print!(".");

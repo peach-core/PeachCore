@@ -1,4 +1,7 @@
-use crate::trap::{kpthread_trap_return, trap_return};
+use crate::trap::{
+    kpthread_trap_return,
+    trap_return,
+};
 
 #[repr(C)]
 pub struct TaskContext {

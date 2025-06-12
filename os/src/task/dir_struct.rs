@@ -1,7 +1,7 @@
 use core::str::FromStr;
 
 use crate::{
-    fs::OSInode,
+    fs::Inode,
     sync::UPIntrFreeCell,
 };
 use alloc::{
@@ -10,19 +10,19 @@ use alloc::{
 };
 
 // TODO: Perhaps there will be concurrent bugs, multi-fs_struct have same work directory. We need
-// some mechanism to make sure they are clone from same Arc<OSInode>.
+// some mechanism to make sure they are clone from same Arc<dyn Inode>.
 // Here We have only one root directory. So I don't dispose it.
-pub struct DirStruct {
-    inner: UPIntrFreeCell<DirStructInner>,
+pub struct DirStruct<I: Inode> {
+    inner: UPIntrFreeCell<DirStructInner<I>>,
 }
 
-pub struct DirStructInner {
-    pub path: Path,
+pub struct DirStructInner<I: Inode> {
+    pub path: Path<I>,
     // pub root: Path,
 }
 
-impl DirStruct {
-    pub fn new(current_inode: &Arc<OSInode>) -> Self {
+impl<I: Inode> DirStruct<I> {
+    pub fn new(current_inode: &Arc<I>) -> Self {
         DirStruct {
             inner: unsafe {
                 UPIntrFreeCell::new(DirStructInner {
@@ -38,7 +38,7 @@ impl DirStruct {
         }
     }
 
-    pub fn get_current_inode(&self) -> Arc<OSInode> {
+    pub fn get_current_inode(&self) -> Arc<I> {
         let inner = self.inner.exclusive_access();
         let os_inode = inner.path.inode.clone();
         drop(inner);
@@ -48,20 +48,20 @@ impl DirStruct {
     /// On error, -1 is returned.
     /// Maybe return Result is better?
     /// TODO: only an interface now. To realize it, we need support by fs. `fs.find(path) ->
-    /// OSInode`
+    /// dyn Inode`
     pub fn chdir(&self, path: &str) -> isize {
         let mut inner = self.inner.exclusive_access();
         inner.path.cwd = String::from_str(path).unwrap();
         0
     }
 
-    pub fn getcwd(& self) -> String {
+    pub fn getcwd(&self) -> String {
         let inner = self.inner.exclusive_access();
         inner.path.cwd.clone()
     }
 }
 
-struct Path {
+struct Path<I: Inode> {
     pub cwd: String,
-    pub inode: Arc<OSInode>,
+    pub inode: Arc<I>,
 }

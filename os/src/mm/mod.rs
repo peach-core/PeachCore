@@ -13,28 +13,28 @@ pub use address::{
     VirtPageNum,
 };
 pub use frame_allocator::{
+    FrameTracker,
     frame_alloc,
     frame_alloc_more,
     frame_dealloc,
-    FrameTracker,
 };
 pub use memory_set::{
-    kernel_token,
+    KERNEL_SPACE,
     MapArea,
     MapPermission,
     MapType,
     MemorySet,
-    KERNEL_SPACE,
+    kernel_token,
 };
 use page_table::PTEFlags;
 pub use page_table::{
+    PageTable,
+    PageTableEntry,
+    UserBuffer,
     translated_byte_buffer,
     translated_ref,
     translated_refmut,
     translated_str,
-    PageTable,
-    PageTableEntry,
-    UserBuffer,
 };
 
 pub fn init() {

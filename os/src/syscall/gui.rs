@@ -26,8 +26,8 @@ pub fn sys_framebuffer() -> isize {
     let mut inner = current_process.inner_exclusive_access();
     inner.memory_set.push(
         MapArea::new(
-            (FB_VADDR as usize).into(),
-            (FB_VADDR + len as usize).into(),
+            FB_VADDR.into(),
+            (FB_VADDR + len).into(),
             MapType::Linear(pn_offset),
             MapPermission::R | MapPermission::W | MapPermission::U,
         ),

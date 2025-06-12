@@ -4,12 +4,12 @@ use crate::{
         UPIntrFreeCell,
     },
     task::{
+        TaskContext,
+        TaskStruct,
         block_current_and_run_next,
         block_current_task,
         current_task,
         wakeup_task,
-        TaskContext,
-        TaskStruct,
     },
 };
 use alloc::{

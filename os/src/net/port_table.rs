@@ -65,7 +65,7 @@ pub fn port_acceptable(listen_index: usize) -> bool {
     assert!(listen_index < listen_table.len());
 
     let listen_port = listen_table[listen_index].as_mut();
-    listen_port.map_or(false, |x| x.receivable)
+    listen_port.is_some_and(|x| x.receivable)
 }
 
 // check whether it can accept request
@@ -74,11 +74,11 @@ pub fn check_accept(port: u16, tcp_packet: &TCPPacket) -> Option<()> {
         let mut listen_ports: Vec<&mut Option<Port>> = listen_table
             .iter_mut()
             .filter(|x| match x {
-                Some(t) => t.port == port && t.receivable == true,
+                Some(t) => t.port == port && t.receivable,
                 None => false,
             })
             .collect();
-        if listen_ports.len() == 0 {
+        if listen_ports.is_empty() {
             None
         } else {
             let listen_port = listen_ports[0].as_mut().unwrap();

@@ -1,3 +1,4 @@
+#![allow(static_mut_refs)]
 use crate::config::KERNEL_HEAP_SIZE;
 use buddy_system_allocator::LockedHeap;
 
@@ -25,7 +26,7 @@ pub fn heap_test() {
         boxed::Box,
         vec::Vec,
     };
-    extern "C" {
+    unsafe extern "C" {
         fn sbss();
         fn ebss();
     }

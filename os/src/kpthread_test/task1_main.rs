@@ -1,6 +1,12 @@
-use log::{info, trace};
+use log::{
+    info,
+    trace,
+};
 
-use crate::{timer::get_time, syscall::process::sys_yield};
+use crate::{
+    syscall::process::sys_yield,
+    timer::get_time,
+};
 
 const LOOP_SIZE: usize = 5;
 

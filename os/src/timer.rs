@@ -5,8 +5,8 @@ use crate::{
     sbi::set_timer,
     sync::UPIntrFreeCell,
     task::{
-        wakeup_task,
         TaskStruct,
+        wakeup_task,
     },
 };
 use alloc::{

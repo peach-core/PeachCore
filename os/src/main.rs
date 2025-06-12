@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
-#![feature(panic_info_message)]
 #![feature(alloc_error_handler)]
+#![feature(trait_alias)]
 
 //use crate::drivers::{GPU_DEVICE, KEYBOARD_DEVICE, MOUSE_DEVICE, INPUT_CONDVAR};
 use crate::drivers::{
@@ -48,7 +48,7 @@ use crate::drivers::chardev::{
 core::arch::global_asm!(include_str!("entry.asm"));
 
 fn clear_bss() {
-    extern "C" {
+    unsafe extern "C" {
         fn sbss();
         fn ebss();
     }
@@ -82,7 +82,7 @@ fn debug_log() {
     );
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub fn rust_main() -> ! {
     clear_bss();
     logging::init();

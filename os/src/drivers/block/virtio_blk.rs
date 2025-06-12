@@ -1,14 +1,18 @@
+
 use super::BlockDevice;
 use crate::{
+    DEV_NON_BLOCKING_ACCESS,
     drivers::bus::virtio::VirtioHal,
     sync::{
         Condvar,
         UPIntrFreeCell,
     },
     task::schedule,
-    DEV_NON_BLOCKING_ACCESS,
 };
-use alloc::collections::BTreeMap;
+use alloc::{
+    collections::BTreeMap,
+    sync::Arc,
+};
 use virtio_drivers::{
     BlkResp,
     RespStatus,
@@ -74,6 +78,13 @@ impl BlockDevice for VirtIOBlock {
             }
         });
     }
+
+    fn instance() -> Arc<Self> {
+        lazy_static::lazy_static! {
+            static ref BLOCK_DEVICE: Arc<VirtIOBlock> = Arc::new(VirtIOBlock::new());
+        }
+        BLOCK_DEVICE.clone()
+    }
 }
 
 impl VirtIOBlock {
@@ -95,3 +106,6 @@ impl VirtIOBlock {
         }
     }
 }
+
+unsafe impl Send for VirtIOBlock {}
+unsafe impl Sync for VirtIOBlock {}

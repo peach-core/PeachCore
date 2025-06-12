@@ -9,8 +9,8 @@ DISASM_TMP := target/$(TARGET)/$(MODE)/asm
 FS_IMG := ../easy-fs-fuse/image/fs.img
 APPS := ../user/src/bin/*
 
-CC := riscv64-unknown-elf-gcc
-CXX := riscv64-unknown-elf-g++
+CC := riscv64-elf-gcc
+CXX := riscv64-elf-g++
 DEBUG_FLAG := -g
 
 OS_ROOT := .
@@ -142,6 +142,6 @@ gdbserver: qemu-version-check build
 	@qemu-system-riscv64 $(QEMU_ARGS) -s -S
 
 gdbclient:
-	@riscv64-unknown-elf-gdb -ex 'file $(KERNEL_ELF)' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'
+	@riscv64-elf-gdb -ex 'file $(KERNEL_ELF)' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'
 
 .PHONY: build env kernel clean disasm disasm-vim run-inner fs-img gdbserver gdbclient fdt qemu-version-check $(OS_OBJ_DIR)/%.o

@@ -224,7 +224,7 @@ where
     T: StepByOne + Copy + PartialEq + PartialOrd + Debug,
 {
     pub fn new(start: T, end: T) -> Self {
-        assert!(start <= end, "start {:?} > end {:?}!", start, end);
+        assert!(start <= end, "start {start:?} > end {end:?}!");
         Self { l: start, r: end }
     }
     pub fn get_start(&self) -> T {

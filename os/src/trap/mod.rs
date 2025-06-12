@@ -4,6 +4,7 @@ use crate::{
     config::TRAMPOLINE,
     syscall::syscall,
     task::{
+        SignalFlags,
         check_signals_of_current,
         current_add_signal,
         current_process,
@@ -12,7 +13,6 @@ use crate::{
         current_user_token,
         exit_current_and_run_next,
         suspend_current_and_run_next,
-        SignalFlags,
     },
     timer::{
         check_timer,
@@ -40,7 +40,7 @@ pub fn init() {
 }
 
 fn set_kernel_trap_entry() {
-    extern "C" {
+    unsafe extern "C" {
         fn __traps_entry();
         fn __traps_entry_k();
     }
@@ -53,13 +53,13 @@ fn set_kernel_trap_entry() {
 
 fn set_user_trap_entry() {
     unsafe {
-        stvec::write(TRAMPOLINE as usize, TrapMode::Direct);
+        stvec::write(TRAMPOLINE, TrapMode::Direct);
     }
 }
 
 fn set_kpthread_trap_entry() {
     unsafe {
-        extern "C" {
+        unsafe extern "C" {
             fn __kpthread_traps_entry();
         }
         stvec::write(__kpthread_traps_entry as usize, TrapMode::Direct);
@@ -84,7 +84,7 @@ fn disable_supervisor_interrupt() {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub fn trap_handler() -> ! {
     set_kernel_trap_entry();
     let scause = scause::read();
@@ -150,13 +150,13 @@ pub fn trap_handler() -> ! {
     trap_return();
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub fn trap_return() -> ! {
     disable_supervisor_interrupt();
     set_user_trap_entry();
     let trap_ctx_user_va = current_trap_ctx_user_va();
     let user_satp = current_user_token();
-    extern "C" {
+    unsafe extern "C" {
         fn __traps_entry();
         fn __traps_restore();
     }
@@ -174,7 +174,7 @@ pub fn trap_return() -> ! {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub fn trap_from_kernel(_trap_ctx: &TrapContext) {
     let scause = scause::read();
     let stval = stval::read();
@@ -205,7 +205,7 @@ pub fn trap_from_kernel(_trap_ctx: &TrapContext) {
 /// kpthread will go here after interrupt.
 pub fn kpthread_trap_return(ctx: &mut TrapContext) -> ! {
     set_kpthread_trap_entry();
-    extern "C" {
+    unsafe extern "C" {
         fn __kpthread_traps_restore();
     }
     let restore = __kpthread_traps_restore as usize;
@@ -221,7 +221,7 @@ pub fn kpthread_trap_return(ctx: &mut TrapContext) -> ! {
 }
 
 /// Kernel thread interrupt. kernel_trap.S will call this function.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub fn kpthread_trap_handler(ctx: &mut TrapContext) -> ! {
     let scause = scause::read(); // get trap cause
     let stval = stval::read(); // get extra value

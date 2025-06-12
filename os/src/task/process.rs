@@ -1,25 +1,27 @@
 use super::{
+    PidHandle,
+    SignalFlags,
+    TaskStruct,
     add_task,
     dir_struct::DirStruct,
     id::RecycleAllocator,
     manager::insert_into_pid2process,
     pid_alloc,
-    PidHandle,
-    SignalFlags,
-    TaskStruct,
 };
 use crate::{
     fs::{
         File,
-        OSInode,
+        FileSystemTrait,
+        Inode,
         Stdin,
         Stdout,
-        ROOT_INODE,
+        SysFileSystem,
+        SysInode,
     },
     mm::{
-        translated_refmut,
-        MemorySet,
         KERNEL_SPACE,
+        MemorySet,
+        translated_refmut,
     },
     sync::{
         Condvar,
@@ -29,8 +31,8 @@ use crate::{
         UPIntrRefMut,
     },
     trap::{
-        trap_handler,
         TrapContext,
+        trap_handler,
     },
 };
 use alloc::{
@@ -65,7 +67,7 @@ pub struct ProcessControlBlockInner {
     pub parent: Option<Weak<ProcessControlBlock>>,          // parent process
     pub children: Vec<Arc<ProcessControlBlock>>,            // children processes array
 
-    pub dir_struct: Arc<DirStruct>,                         // Process Session. Aslo Process Group.
+    pub dir_struct: Arc<DirStruct<SysInode>>,                         // Process Session. Aslo Process Group.
 
 
     // =====================================================
@@ -133,7 +135,7 @@ impl ProcessControlBlock {
         let (memory_set, ustack_base, entry_point) = MemorySet::from_elf(elf_data);
         // allocate a pid
         let pid_handle = pid_alloc();
-        let root_os_inode = Arc::new(OSInode::new(true, true, ROOT_INODE.clone()));
+        let root_os_inode = SysFileSystem::get_root_inode();
 
         let process = Arc::new(Self {
             pid_handle,
@@ -191,7 +193,7 @@ impl ProcessControlBlock {
         // allocate a pid
         let pid_handle = pid_alloc();
         let ustack_base = user_stack_upper_bound;
-        let root_os_inode = Arc::new(OSInode::new(true, true, ROOT_INODE.clone()));
+        let root_os_inode = SysFileSystem::get_root_inode();
 
         let process = Arc::new(Self {
             pid_handle,
@@ -380,9 +382,8 @@ impl ProcessControlBlock {
         0
     }
 
-    pub fn getcwd(& self) -> String {
-        self.inner
-            .exclusive_session(|inner| inner.get_cwd())
+    pub fn getcwd(&self) -> String {
+        self.inner.exclusive_session(|inner| inner.get_cwd())
     }
 
     // TODO
