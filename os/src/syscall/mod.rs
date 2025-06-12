@@ -5,6 +5,7 @@ mod mm;
 mod net;
 pub mod process;
 mod sync;
+mod sys;
 mod thread;
 pub mod user_space;
 
@@ -19,6 +20,7 @@ use mm::{
 use net::*;
 use process::*;
 use sync::*;
+use sys::sys_uname;
 use thread::*;
 use crate::{task::current_task,timer::get_time};
 #[allow(unused)]
@@ -51,6 +53,7 @@ pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
         call::SCHED_YIELD => sys_yield(),
         call::KILL => sys_kill(args[0], args[1] as u32),
         call::TIMES => sys_times(args[0] as usize),
+        call::UNAME => sys_uname(args[0] as usize),
         call::GETTIMEOFDAY => sys_get_time(__user::new(args[0] as *mut TimeVal), args[1] as i32),
         call::GETPID => sys_getpid(),
         call::CLONE => sys_fork(),

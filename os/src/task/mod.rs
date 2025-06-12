@@ -98,8 +98,6 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     let tid = task_inner.res.as_ref().unwrap().tid;
     // record exit code
     task_inner.accumulate_usrtime();
-    process.inner_exclusive_access().children_exited_systime_accumulation += task_inner.cpu_systime_accumulation;
-    process.inner_exclusive_access().children_exited_usrtime_accumulation += task_inner.cpu_usrtime_accumulation;
     task_inner.exit_code = Some(exit_code << 8);
     task_inner.res = None;
     // here we do not remove the thread since we are still using the kstack
