@@ -1,5 +1,8 @@
 use alloc::sync::Arc;
-use redoxfs::{Disk, FileSystem, TreePtr};
+use redoxfs::{
+    FileSystem,
+    TreePtr,
+};
 use spin::Mutex;
 use syscall::Result;
 
@@ -45,7 +48,7 @@ impl<B: BlockDevice> redoxfs::Disk for CoreDisk<B> {
     }
 
     fn size(&mut self) -> Result<u64> {
-        const SIZE : u64 = 512; // VIRTIOBlock has 512 bytes per block
+        const SIZE: u64 = 512; // VIRTIOBlock has 512 bytes per block
         Ok(SIZE)
     }
 }
@@ -56,8 +59,7 @@ impl super::FileSystemTrait for FileSystem<CoreDisk<Arc<VirtIOBlock>>> {
     fn get_root_inode() -> alloc::sync::Arc<Self::Inode> {
         let block_dev = VirtIOBlock::instance();
         let disk = CoreDisk(block_dev);
-        let fs = FileSystem::open(disk, None, None, false)
-            .expect("Failed to open RedoxFS disk");
+        let fs = FileSystem::open(disk, None, None, false).expect("Failed to open RedoxFS disk");
         let fs = Arc::new(Mutex::new(fs));
         Arc::new(RefoxInode::new(fs, TreePtr::root()))
     }

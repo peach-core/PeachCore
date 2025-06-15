@@ -59,6 +59,23 @@ impl<I: Inode> DirStruct<I> {
         let inner = self.inner.exclusive_access();
         inner.path.cwd.clone()
     }
+
+    pub fn mkdirat(&self, name: &str) -> Option<Arc<I>> {
+        let mut inner = self.inner.exclusive_access();
+        let inode = inner.path.inode.mkdir(name)?;
+        inner.path.cwd.push('/');
+        inner.path.cwd.push_str(name);
+        Some(inode)
+    }
+
+    pub fn rmdirat(&self, name: &str) -> Option<Arc<I>> {
+        let mut inner = self.inner.exclusive_access();
+        let inode = inner.path.inode.rmdir(name)?;
+        if let Some(pos) = inner.path.cwd.rfind('/') {
+            inner.path.cwd.truncate(pos);
+        }
+        Some(inode)
+    }
 }
 
 struct Path<I: Inode> {

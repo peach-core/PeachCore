@@ -161,7 +161,7 @@ impl TaskUserRes {
 
     pub fn new_kpthread(process: Arc<ProcessControlBlock>, ustack_base: usize) -> Self {
         let tid = process.inner_exclusive_access().alloc_tid();
-        
+
         Self {
             tid,
             ustack_base,

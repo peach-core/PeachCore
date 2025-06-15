@@ -14,8 +14,16 @@ pub trait Inode: Send + Sync + 'static {
     fn ls(&self) -> Vec<String>;
 
     fn find(&self, name: &str) -> Option<Arc<Self>>;
- 
+
     fn create(&self, name: &str) -> Option<Arc<Self>>;
+
+    fn mkdir(&self, name: &str) -> Option<Arc<Self>>;
+
+    fn rmdir(&self, name: &str) -> Option<Arc<Self>>;
+
+    fn linkat(&self, name: &str, inode: Arc<Self>) -> Option<Arc<Self>> {
+        None
+    }
 }
 
 pub trait FileSystemTrait: Send + Sync {

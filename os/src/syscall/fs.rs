@@ -44,35 +44,64 @@ pub fn sys_read(fd: usize, buf: __user<*const u8>, len: usize) -> isize {
     let process = current_process();
     let inner = process.inner_exclusive_access();
     if fd >= inner.fd_table.len() {
+        log::error!("sys_read: fd {} out of bounds", fd);
         return -1;
     }
     if let Some(file) = &inner.fd_table[fd] {
         let file = file.clone();
         if !file.readable() {
+            log::error!("sys_read: file {} is not readable", fd);
             return -1;
         }
         // release current task TCB manually to avoid multi-borrow
         drop(inner);
         file.read(UserBuffer::new(translated_byte_buffer(token, buf, len))) as isize
     } else {
+        log::error!("sys_read: fd {} is not open", fd);
         -1
     }
 }
 
-pub fn sys_open(path: __user<*const u8>, flags: u32) -> isize {
-    let process = current_process();
+pub fn sys_openat(dirfd: i32, path: __user<*const u8>, flags: i32) -> isize {
+    const AT_FDCWD: i32 = -100;
+
     let token = current_user_token();
-    let path = translated_str(token, path);
-    if let Some(inode) = open_file(path.as_str(), OpenFlags::from_bits(flags).unwrap()) {
-        let mut inner = process.inner_exclusive_access();
-        let fd = inner.alloc_fd();
-        inner.fd_table[fd] = Some(inode);
-        fd as isize
+    let path_str = translated_str(token, path);
+    let path_str = path_str.strip_prefix("./").unwrap_or(&path_str);
+    let process = current_process();
+    let open_flags = OpenFlags::from_bits(flags).unwrap_or(OpenFlags::empty());
+
+    let file_opt = if path_str.starts_with("/") || dirfd == AT_FDCWD {
+        open_file(path_str, open_flags)
     } else {
+        // absolute path
+        let inner = process.inner_exclusive_access();
+        if (dirfd as usize) >= inner.fd_table.len() || inner.fd_table[dirfd as usize].is_none() {
+            log::error!("sys_openat: dirfd {} is invalid", dirfd);
+            None
+        } else {
+            let dir_file = inner.fd_table[dirfd as usize].as_ref().unwrap().clone();
+            drop(inner);
+            // TODO: handle relative path
+            open_file(path_str, open_flags)
+        }
+    };
+
+    if let Some(file) = file_opt {
+        let mut inner = process.inner_exclusive_access();
+        for (i, slot) in inner.fd_table.iter_mut().enumerate() {
+            if slot.is_none() {
+                *slot = Some(file);
+                return i as isize;
+            }
+        }
+        inner.fd_table.push(Some(file));
+        (inner.fd_table.len() - 1) as isize
+    } else {
+        log::error!("sys_openat: failed to open file {}", path_str);
         -1
     }
 }
-
 pub fn sys_close(fd: usize) -> isize {
     let process = current_process();
     let mut inner = process.inner_exclusive_access();

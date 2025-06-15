@@ -37,9 +37,10 @@ impl Semaphore {
         let mut inner = self.inner.exclusive_access();
         inner.count += 1;
         if inner.count <= 0
-            && let Some(task) = inner.wait_queue.pop_front() {
-                wakeup_task(task);
-            }
+            && let Some(task) = inner.wait_queue.pop_front()
+        {
+            wakeup_task(task);
+        }
     }
 
     pub fn down(&self) {

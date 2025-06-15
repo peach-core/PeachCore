@@ -391,9 +391,14 @@ impl ProcessControlBlock {
         0
     }
 
-    // TODO
-    pub fn mkdirat(&self, _path: &str) -> isize {
-        0
+    pub fn mkdirat(&self, path: &str) -> isize {
+        self.inner
+            .exclusive_session(|inner| inner.dir_struct.mkdirat(path).map_or(-1, |_| 0))
+    }
+
+    pub fn rmdirat(&self, path: &str) -> isize {
+        self.inner
+            .exclusive_session(|inner| inner.dir_struct.rmdirat(path).map_or(-1, |_| 0))
     }
 
     // TODO

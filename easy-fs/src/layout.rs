@@ -60,6 +60,7 @@ impl SuperBlock {
 
 #[derive(PartialEq)]
 pub enum DiskInodeType {
+    Free,
     File,
     Directory,
 }
@@ -84,6 +85,10 @@ impl DiskInode {
         self.indirect1 = 0;
         self.indirect2 = 0;
         self.type_ = type_;
+
+        for blk in self.direct.iter_mut() {
+            *blk = 0;
+        }
     }
     pub fn is_dir(&self) -> bool {
         self.type_ == DiskInodeType::Directory

@@ -28,7 +28,9 @@ pub fn get_s_a_by_index(index: usize) -> Option<(u32, u32)> {
 
     assert!(index < socket_table.len());
 
-    socket_table.get(index).and_then(|x| x.as_ref().map(|x| (x.seq, x.ack)))
+    socket_table
+        .get(index)
+        .and_then(|x| x.as_ref().map(|x| (x.seq, x.ack)))
 }
 
 pub fn set_s_a_by_index(index: usize, seq: u32, ack: u32) {

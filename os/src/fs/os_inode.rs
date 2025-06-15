@@ -1,4 +1,3 @@
-
 use crate::{
     fs::{
         File,
@@ -12,7 +11,6 @@ use alloc::{
     vec::Vec,
 };
 use bitflags::*;
-
 
 pub struct OSInode<I: Inode> {
     readable: bool,
@@ -49,12 +47,54 @@ impl<I: Inode> OSInode<I> {
 }
 
 bitflags! {
-    pub struct OpenFlags: u32 {
-        const RDONLY = 0;
-        const WRONLY = 1 << 0;
-        const RDWR   = 1 << 1;
-        const CREATE = 1 << 9;
-        const TRUNC  = 1 << 10;
+    pub struct OpenFlags: i32 {
+        const ACCMODE   = 0o3;               // O_ACCMODE
+        const RDONLY    = 0o0;               // O_RDONLY
+        const WRONLY    = 0o1;               // O_WRONLY
+        const RDWR      = 0o2;               // O_RDWR
+        const CREAT     = 0o100;             // O_CREAT
+        const EXCL      = 0o200;             // O_EXCL
+        const NOCTTY    = 0o400;             // O_NOCTTY
+        const TRUNC     = 0o1000;            // O_TRUNC
+        const APPEND    = 0o2000;            // O_APPEND
+        const NONBLOCK  = 0o4000;            // O_NONBLOCK
+        const NDELAY    = Self::NONBLOCK.bits; // O_NDELAY = O_NONBLOCK
+        const SYNC      = 0o4010000;         // O_SYNC
+        const FSYNC     = Self::SYNC.bits;     // O_FSYNC = O_SYNC
+        const DSYNC     = 0o10000;           // O_DSYNC
+        const ASYNC     = 0o20000;           // O_ASYNC
+        const DIRECT    = 0o40000;           // O_DIRECT
+        const LARGEFILE = 0o100000;          // O_LARGEFILE
+        const NOATIME   = 0o1000000;         // O_NOATIME
+        const DIRECTORY = 0o200000;          // O_DIRECTORY
+        const PATH      = 0o10000000;        // O_PATH
+        const TMPFILE   = 0o20200000;        // O_TMPFILE = O_DIRECTORY|020000000
+        const NOFOLLOW  = 0o400000;          // O_NOFOLLOW
+        const CLOEXEC   = 0o2000000;         // O_CLOEXEC
+    }
+}
+
+bitflags! {
+    pub struct FileMode: u32 {
+        const S_IRWXU = 0o700; // rwx, ---, ---
+        const S_IRUSR = 0o400; // r--, ---, ---
+        const S_IWUSR = 0o200; // -w-, ---, ---
+        const S_IXUSR = 0o100; // --x, ---, ---
+
+        const S_IRWXG = 0o070; // ---, rwx, ---
+        const S_IRGRP = 0o040; // ---, r--, ---
+        const S_IWGRP = 0o020; // ---, -w-, ---
+        const S_IXGRP = 0o010; // ---, --x, ---
+
+        const S_IRWXO = 0o007; // ---, ---, rwx
+        const S_IROTH = 0o004; // ---, ---, r--
+        const S_IWOTH = 0o002; // ---, ---, -w-
+        const S_IXOTH = 0o001; // ---, ---, --x
+
+        const S_ISUID = 0o4000; // Set user ID on execution
+        const S_ISGID = 0o2000; // Set group ID on execution
+        const S_ISVTX = 0o1000; // Sticky bit
+
     }
 }
 

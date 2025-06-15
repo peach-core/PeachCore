@@ -1,12 +1,11 @@
 mod virtio_blk;
 
-
 pub use virtio_blk::VirtIOBlock;
 
 use crate::fs::{
-        BlockDevice,
-        SysBlockDevice,
-    };
+    BlockDevice,
+    SysBlockDevice,
+};
 
 #[allow(unused)]
 pub fn block_device_test() {

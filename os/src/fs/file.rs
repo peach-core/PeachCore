@@ -20,7 +20,7 @@ pub fn open_file(
 ) -> Option<Arc<OSInode<<SysFileSystem as FileSystemTrait>::Inode>>> {
     let (r, w) = flags.read_write();
     let root = SysFileSystem::get_root_inode();
-    if flags.contains(OpenFlags::CREATE) {
+    if flags.contains(OpenFlags::CREAT) {
         let inode = root.find(name).or_else(|| root.create(name))?;
         if flags.contains(OpenFlags::TRUNC) {
             inode.clear()

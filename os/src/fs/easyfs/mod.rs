@@ -40,6 +40,14 @@ impl Inode for EasyInode {
     fn find(&self, name: &str) -> Option<Arc<Self>> {
         easy_fs::Inode::find(self, name).map(|inode| inode as Arc<Self>)
     }
+
+    fn mkdir(&self, name: &str) -> Option<Arc<Self>> {
+        easy_fs::Inode::mkdir(self, name)
+    }
+
+    fn rmdir(&self, name: &str) -> Option<Arc<Self>> {
+        easy_fs::Inode::rmdir(self, name)
+    }
 }
 
 impl easy_fs::BlockDevice for VirtIOBlock {
@@ -62,4 +70,4 @@ impl FileSystemTrait for FileSystem {
         let block_dev = VirtIOBlock::instance();
         Arc::new(EasyFileSystem::root_inode(&EasyFileSystem::open(block_dev)))
     }
-} 
+}

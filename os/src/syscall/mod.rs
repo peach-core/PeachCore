@@ -25,7 +25,11 @@ pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
         call::CONNECT => sys_connect(args[0] as _, args[1] as _, args[2] as _),
         call::LISTEN => sys_listen(args[0] as _),
         call::ACCEPT => sys_accept(args[0] as _),
-        call::OPENAT => sys_open(__user::new(args[0] as *const u8), args[1] as u32),
+        call::OPENAT => sys_openat(
+            args[0] as i32,
+            __user::new(args[1] as *const u8),
+            args[2] as i32,
+        ),
         call::CLOSE => sys_close(args[0]),
         call::PIPE2 => sys_pipe(__user::new(args[0] as *mut usize)),
         call::READ => sys_read(args[0], __user::new(args[1] as *const u8), args[2]),
