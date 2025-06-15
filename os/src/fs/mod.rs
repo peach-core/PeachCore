@@ -2,7 +2,7 @@ pub mod easyfs;
 pub mod file;
 pub mod os_inode;
 pub mod pipe;
-// pub mod redoxfs;
+pub mod redoxfs;
 pub mod stdio;
 pub mod vfs;
 

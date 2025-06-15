@@ -1,5 +1,3 @@
-pub mod inode;
-
 use crate::{
     drivers::block::VirtIOBlock,
     fs::Arc,

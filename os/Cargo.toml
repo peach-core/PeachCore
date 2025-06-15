@@ -22,5 +22,7 @@ log = "0.4"
 sbi-rt = { version = "0.0.2", features = ["legacy"] }
 syscall_nr = {path = "../syscall_nr"}
 redoxfs = { git = "https://github.com/tsukinaha/redoxfs.git", default-features = false }
+syscall = { package = "redox_syscall", git = "https://github.com/redox-os/syscall.git" }
+spin = "0.10.0"
 [profile.release]
 debug = true
