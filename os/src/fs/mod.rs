@@ -27,7 +27,8 @@ pub use file::{
 };
 
 pub type SysFileSystem = easyfs::FileSystem;
-pub type SysInode = easy_fs::Inode;
+
+pub type SysInode = <SysFileSystem as FileSystemTrait>::Inode;
 pub type SysBlockDevice = VirtIOBlock;
 
 pub trait BlockDevice: Send + Sync {
