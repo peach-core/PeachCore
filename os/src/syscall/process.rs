@@ -10,8 +10,18 @@ use crate::{
         translated_str,
         UserBuffer,
     },
+    syscall::thread::sys_gettid,
     task::{
-        add_task, current_process, current_task, current_user_token, exit_current_and_run_next, pid2process, suspend_current_and_run_next, ProcessControlBlock, SignalFlags, TaskStruct
+        add_task,
+        current_process,
+        current_task,
+        current_user_token,
+        exit_current_and_run_next,
+        pid2process,
+        suspend_current_and_run_next,
+        ProcessControlBlock,
+        SignalFlags,
+        TaskStruct,
     },
     timer::get_time_ms,
 };
@@ -21,7 +31,10 @@ use alloc::{
     sync::Arc,
     vec::Vec,
 };
-use shared_defination::clone;
+use shared_defination::clone::{
+    self,
+    flag::CLONE_PARENT_SETTID,
+};
 
 use super::{
     user_space::__user,
@@ -110,7 +123,7 @@ pub fn sys_linkat(
 }
 
 pub fn sys_clone(
-    flags: usize, stack: usize, _ptid: __user<*mut u32>, _tls: __user<*mut usize>,
+    flags: usize, stack: usize, ptid: __user<*mut u32>, _tls: __user<*mut usize>,
     ctid: __user<*mut u32>,
 ) -> isize {
     // fork
@@ -132,7 +145,7 @@ pub fn sys_clone(
             .ustack_base,
         true, // TODO: user stack was allocate by parent thread.
     ));
-    
+
     let new_task_inner = new_task.inner_exclusive_access();
     let new_task_res = new_task_inner.res.as_ref().unwrap();
     let new_task_tid = new_task_res.tid;
@@ -149,9 +162,19 @@ pub fn sys_clone(
     (*new_task_trap_ctx).x[2] = stack;
     (*new_task_trap_ctx).x[10] = 0;
 
+    drop(process_inner);
+    if flags & CLONE_PARENT_SETTID != 0 {
+        if ptid.inner() as usize != 0usize {
+            let ptid_addr = translated_refmut(current_user_token(), ptid);
+            *ptid_addr = new_task_tid as u32;
+        } else {
+            return -1;
+        }
+    }
+    
     // add new task to scheduler
     add_task(Arc::clone(&new_task));
-
+    
     new_task_tid as isize
 }
 
