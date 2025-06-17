@@ -1,4 +1,6 @@
 extern crate shared_defination;
+use core::arch::global_asm;
+
 use shared_defination::syscall_nr::call;
 
 bitflags! {
@@ -86,7 +88,7 @@ pub fn sys_kill(pid: usize, signal: i32) -> isize {
     syscall(call::KILL, [pid, signal as usize, 0])
 }
 
-pub fn sys_times(tms: *mut [usize;4]) -> isize {
+pub fn sys_times(tms: *mut [usize; 4]) -> isize {
     syscall(call::TIMES, [tms as usize, 0, 0])
 }
 
@@ -101,6 +103,30 @@ pub fn sys_get_time() -> isize {
 
 pub fn sys_getpid() -> isize {
     syscall(call::GETPID, [0, 0, 0])
+}
+
+global_asm!(include_str!("__clone.S"));
+extern "C" {
+    pub fn __clone(
+        func: fn(*mut u8),
+        stack: *mut u8,
+        flags: usize,
+        arg: *mut u8,
+        ptid: *mut u32,
+        tls: *mut u8,
+        ctid: *mut u32,
+    ) -> isize;
+}
+pub fn sys_clone(
+    func: fn(*mut u8),
+    stack: *mut u8,
+    flags: usize,
+    arg: *mut u8,
+    ptid: *mut u32,
+    tls: *mut u8,
+    ctid: *mut u32,
+) -> isize {
+    unsafe { __clone(func, stack, flags, arg, ptid, tls, ctid) }
 }
 
 pub fn sys_fork() -> isize {

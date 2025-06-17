@@ -13,6 +13,7 @@ use crate::{
         UPIntrFreeCell,
         UPIntrRefMut,
     },
+    syscall::user_space::__user,
     timer::get_time,
     trap::TrapContext,
 };
@@ -25,6 +26,11 @@ pub struct TaskStruct {
     // immutable
     pub process: Weak<ProcessControlBlock>,
     pub kstack: KernelStack,
+
+    // clone infomation.
+    pub clone_flags: usize,
+    pub ctid_ptr: usize,
+
     // mutable
     pub inner: UPIntrFreeCell<TaskControlBlockInner>,
 }
@@ -77,7 +83,8 @@ impl TaskControlBlockInner {
 
 impl TaskStruct {
     pub fn new(
-        process: Arc<ProcessControlBlock>, ustack_base: usize, alloc_user_res: bool,
+        process: Arc<ProcessControlBlock>, clone_flags: usize, ctid: __user<*mut u32>,
+        ustack_base: usize, alloc_user_res: bool,
     ) -> Self {
         let res = TaskUserRes::new(Arc::clone(&process), ustack_base, alloc_user_res);
         let trap_ctx_ppn = res.trap_ctx_ppn();
@@ -86,6 +93,8 @@ impl TaskStruct {
         Self {
             process: Arc::downgrade(&process),
             kstack,
+            clone_flags,
+            ctid_ptr: ctid.inner() as usize,
             inner: unsafe {
                 UPIntrFreeCell::new(TaskControlBlockInner {
                     res: Some(res),
@@ -108,6 +117,8 @@ impl TaskStruct {
         Self {
             process: Arc::downgrade(&process),
             kstack,
+            clone_flags: 0,
+            ctid_ptr: 0,
             inner: unsafe {
                 UPIntrFreeCell::new(TaskControlBlockInner {
                     res: Some(res),

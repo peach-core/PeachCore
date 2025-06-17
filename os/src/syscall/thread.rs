@@ -1,14 +1,12 @@
 use crate::{
-    mm::kernel_token,
-    task::{
+    mm::kernel_token, syscall::user_space::__user, task::{
         add_task,
         current_task,
         TaskStruct,
-    },
-    trap::{
+    }, trap::{
         trap_handler,
         TrapContext,
-    },
+    }
 };
 use alloc::sync::Arc;
 
@@ -18,6 +16,8 @@ pub fn sys_thread_create(entry: usize, arg: usize) -> isize {
     // create a new thread
     let new_task = Arc::new(TaskStruct::new(
         Arc::clone(&process),
+        0,
+        __user::new(0 as *mut u32),
         task.inner_exclusive_access()
             .res
             .as_ref()

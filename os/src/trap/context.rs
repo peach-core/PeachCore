@@ -5,7 +5,7 @@ use riscv::register::sstatus::{
 };
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct TrapContext {
     pub x: [usize; 32],      // reg[0..31].
     pub sstatus: Sstatus,    // CSR sstatus reg.

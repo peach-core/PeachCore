@@ -18,6 +18,17 @@ pub fn getpid() -> isize {
 pub fn fork() -> isize {
     sys_fork()
 }
+pub fn clone(
+    func: fn(*mut u8),
+    stack: *mut u8,
+    flags: usize,
+    arg: *mut u8,
+    ptid: *mut u32,
+    tls: *mut u8,
+    ctid: *mut u32,
+) -> isize {
+    sys_clone(func, stack, flags, arg, ptid, tls, ctid)
+}
 pub fn exec(path: &str, args: &[*const u8]) -> isize {
     sys_exec(path, args)
 }

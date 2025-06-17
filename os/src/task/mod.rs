@@ -1,3 +1,6 @@
+mod context;
+mod dir_struct;
+mod fd_table;
 mod id;
 mod manager;
 mod process;
@@ -6,10 +9,9 @@ mod signal;
 mod switch;
 #[allow(clippy::module_inception)]
 mod task;
-mod dir_struct;
 pub mod wait_queue;
-mod fd_table;
-mod context;
+
+use core::intrinsics::atomic_store_release;
 
 use self::id::TaskUserRes;
 use crate::{
@@ -17,7 +19,10 @@ use crate::{
         open_file,
         OpenFlags,
     },
+    mm::translated_refmut,
     sbi::shutdown,
+    sync::sys_futex,
+    syscall::user_space::__user,
 };
 use alloc::{
     sync::Arc,
@@ -27,6 +32,16 @@ use lazy_static::*;
 use log::trace;
 use manager::fetch_task;
 pub use process::ProcessControlBlock;
+use shared_defination::{
+    clone::flag::{
+        CLONE_CHILD_CLEARTID,
+        CLONE_VM,
+    },
+    syscall_nr::call::{
+        CLONE,
+        FUTEX,
+    },
+};
 use switch::__switch;
 
 pub use context::TaskContext;
@@ -94,20 +109,45 @@ pub fn block_current_and_run_next() {
 
 /// Exit the current 'Running' task and run the next task in task list.
 pub fn exit_current_and_run_next(exit_code: i32) {
-    let task = take_current_task().unwrap();
+    let task = current_task().unwrap();
     let mut task_inner = task.inner_exclusive_access();
     let process = task.process.upgrade().unwrap();
     let tid = task_inner.res.as_ref().unwrap().tid;
+
     // record exit code
     task_inner.accumulate_usrtime();
-    process.inner_exclusive_access().children_exited_systime_accumulation += task_inner.cpu_systime_accumulation;
-    process.inner_exclusive_access().children_exited_usrtime_accumulation += task_inner.cpu_usrtime_accumulation;
+    process
+        .inner_exclusive_access()
+        .children_exited_systime_accumulation += task_inner.cpu_systime_accumulation;
+    process
+        .inner_exclusive_access()
+        .children_exited_usrtime_accumulation += task_inner.cpu_usrtime_accumulation;
+
+    if task.clone_flags & CLONE_CHILD_CLEARTID != 0 {
+        const FUTEX_WAKE: isize = 1;
+        let uaddr = __user::new(task.ctid_ptr as *mut u32);
+        let addr = translated_refmut(current_user_token(), uaddr);
+        unsafe { atomic_store_release(addr, 0) };
+        sys_futex(uaddr, FUTEX_WAKE, 1, 0, __user::new(0 as *mut u32), 0);
+    }
+
+    let mut is_thread = false;
+    if task.clone_flags & CLONE_VM != 0 {
+        is_thread = true;
+    }
+
     task_inner.exit_code = Some(exit_code & (0xff));
     task_inner.res = None;
     // here we do not remove the thread since we are still using the kstack
     // it will be deallocated when sys_waittid is called
     drop(task_inner);
+    let task = take_current_task().unwrap();
     drop(task);
+
+    if is_thread {
+        process.inner_exclusive_access().tasks[tid] = None;
+    }
+
     // however, if this is the main thread of current process
     // the process should terminate at once
     if tid == 0 {

@@ -123,3 +123,25 @@ tidptr: 要被写入当前进程 `tid` 的用户空间地址指针. 后续线程
 |`CLONE_PARENT_SETTID​`  |将线程 ID 写入父进程指定的地址​(用于返回线程 TID)|
 |`CLONE_CHILD_CL`       |EARTID​线程退出时清除子线程 ID​(用于线程同步和资源回收)|
 |`CLONE_DETACHED`       |​创建分离线程​(已废弃，现代 glibc 改用 pthread_detach 控制)|
+
+### `TLS` 机制
+
+#### `目的`
+
+为每个线程实现一个线程本地的全局变量(不在线程栈上). 做到线程间隔离.
+
+#### 实现方式: 硬件与编译器配合
+
+在 elf 文件中有两个特殊的段, `.tbss` 和 `.tdata`, 用于保存线程本地变量(每个线程在创建时可选是否为自己新建一份线程本地变量, 或是与父进程共享 `thread_local` 变量), `CLONE_SETTLS` 标记可以为子进程新建一份变量.  
+
+在线程拷贝时(`clone`), `kernel` 会将 `.tbss` 和 `.tdata` 进行一次拷贝, 并将新拷贝的 `.tbss` 和 `.tdata` 的起始地址写入 `tp` 专用寄存器, 代码在访问 `.tbss` 和 `.tdata` 数据时会通过 `tp` 寄存器的偏移地址进行访问.
+
+|架构      |寄存器	   |用于 TLS base|
+|:-------:|:-------: |:----------:|
+|x86      |	fs	     |fs:[offset]|
+|x86_64   |	fs	     |fs:[offset]|
+|ARM      |	TPIDRURW |系统寄存器|
+|RISC-V   |	tp (x4)	 |Thread Pointer|
+
+不难发现, `TLS` 机制主要由编译器和硬件实现与保证.
+

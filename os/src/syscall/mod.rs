@@ -50,12 +50,12 @@ pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
         call::TIMES => sys_times(args[0] as usize),
         call::GETTIMEOFDAY => sys_get_time(__user::new(args[0] as *mut TimeVal), args[1] as i32),
         call::GETPID => sys_getpid(),
-        call::CLONE => sys_fork(
+        call::CLONE => sys_clone(
             args[0],
             args[1],
-            __user::new(args[2] as *const u8),
-            __user::new(args[3] as *const u8),
-            args[4],
+            __user::new(args[2] as *mut u32),
+            __user::new(args[3] as *mut usize),
+            __user::new(args[4] as *mut u32),
         ),
         call::EXECVE => sys_exec(
             __user::new(args[0] as *const u8),

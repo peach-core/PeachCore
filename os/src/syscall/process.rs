@@ -11,23 +11,17 @@ use crate::{
         UserBuffer,
     },
     task::{
-        current_process,
-        current_task,
-        current_user_token,
-        exit_current_and_run_next,
-        pid2process,
-        ProcessControlBlock,
-        suspend_current_and_run_next,
-        SignalFlags,
+        add_task, current_process, current_task, current_user_token, exit_current_and_run_next, pid2process, suspend_current_and_run_next, ProcessControlBlock, SignalFlags, TaskStruct
     },
     timer::get_time_ms,
 };
 use alloc::{
+    collections::VecDeque,
     string::String,
     sync::Arc,
     vec::Vec,
-    collections::VecDeque,
 };
+use shared_defination::clone;
 
 use super::{
     user_space::__user,
@@ -115,9 +109,53 @@ pub fn sys_linkat(
     0
 }
 
-pub fn sys_fork(
-    _flags: usize, stack: usize, _ptid: __user<*const u8>, _tls: __user<*const u8>, _ctid: usize,
+pub fn sys_clone(
+    flags: usize, stack: usize, _ptid: __user<*mut u32>, _tls: __user<*mut usize>,
+    ctid: __user<*mut u32>,
 ) -> isize {
+    // fork
+    if flags & clone::flag::CLONE_VM == 0 {
+        return sys_fork(flags, stack);
+    }
+
+    let task = current_task().unwrap();
+    let process = task.process.upgrade().unwrap();
+    // create a new thread
+    let new_task = Arc::new(TaskStruct::new(
+        Arc::clone(&process),
+        flags,
+        ctid,
+        task.inner_exclusive_access()
+            .res
+            .as_ref()
+            .unwrap()
+            .ustack_base,
+        true, // TODO: user stack was allocate by parent thread.
+    ));
+    
+    let new_task_inner = new_task.inner_exclusive_access();
+    let new_task_res = new_task_inner.res.as_ref().unwrap();
+    let new_task_tid = new_task_res.tid;
+    let mut process_inner = process.inner_exclusive_access();
+    // add new thread to current process
+    let tasks = &mut process_inner.tasks;
+    while tasks.len() < new_task_tid + 1 {
+        tasks.push(None);
+    }
+    tasks[new_task_tid] = Some(Arc::clone(&new_task));
+    let new_task_trap_ctx = new_task_inner.get_trap_ctx();
+    let mut task_inner = task.inner_exclusive_access();
+    *new_task_trap_ctx = *task_inner.get_trap_ctx();
+    (*new_task_trap_ctx).x[2] = stack;
+    (*new_task_trap_ctx).x[10] = 0;
+
+    // add new task to scheduler
+    add_task(Arc::clone(&new_task));
+
+    new_task_tid as isize
+}
+
+pub fn sys_fork(_flags: usize, stack: usize) -> isize {
     let current_process = current_process();
     let new_process = current_process.fork();
     let new_pid = new_process.getpid();
@@ -224,24 +262,27 @@ pub fn sys_kill(pid: usize, signal: u32) -> isize {
 
 pub fn sys_times(times: usize) -> isize {
     let process = current_process();
-    let tms = (process.inner_exclusive_access().memory_set.translate_va(times)) as *mut [usize; 4];
+    let tms = (process
+        .inner_exclusive_access()
+        .memory_set
+        .translate_va(times)) as *mut [usize; 4];
     for tcb in &(process.inner_exclusive_access().tasks) {
         if let Some(task) = (*tcb).as_ref() {
             let task_inner = task.inner_exclusive_access();
-            unsafe{
+            unsafe {
                 (*tms)[0] += task_inner.cpu_usrtime_accumulation;
                 (*tms)[1] += task_inner.cpu_systime_accumulation;
             }
         }
     }
-    let mut child_pcb_vec:VecDeque<Arc<ProcessControlBlock>> = Default::default();
+    let mut child_pcb_vec: VecDeque<Arc<ProcessControlBlock>> = Default::default();
     child_pcb_vec.push_back(process.clone());
     loop {
-        if let Some(child_pcb) = child_pcb_vec.pop_front(){
+        if let Some(child_pcb) = child_pcb_vec.pop_front() {
             for child_tcb in &(child_pcb.inner_exclusive_access().tasks) {
                 if let Some(task) = (*child_tcb).as_ref() {
                     let task_inner = task.inner_exclusive_access();
-                    unsafe{
+                    unsafe {
                         (*tms)[2] += task_inner.cpu_usrtime_accumulation;
                         (*tms)[3] += task_inner.cpu_systime_accumulation;
                     }
@@ -250,8 +291,9 @@ pub fn sys_times(times: usize) -> isize {
             for child_pcb_child in &(child_pcb.inner_exclusive_access().children) {
                 child_pcb_vec.push_back((*child_pcb_child).clone());
             }
+        } else {
+            break;
         }
-        else {break;}
     }
     0
 }

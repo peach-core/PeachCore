@@ -35,6 +35,7 @@ use crate::{
         UPIntrFreeCell,
         UPIntrRefMut,
     },
+    syscall::user_space::__user,
     task::fd_table::FdTable,
     trap::{
         trap_handler,
@@ -267,7 +268,13 @@ impl ProcessControlBlock {
             },
         });
         // create a main thread, we should allocate ustack and trap_ctx here
-        let task = Arc::new(TaskStruct::new(Arc::clone(&process), ustack_base, true));
+        let task = Arc::new(TaskStruct::new(
+            Arc::clone(&process),
+            0,
+            __user::new(0 as *mut u32),
+            ustack_base,
+            true,
+        ));
         // prepare trap_ctx of main thread
         let task_inner = task.inner_exclusive_access();
         let trap_ctx = task_inner.get_trap_ctx();
@@ -465,6 +472,8 @@ impl ProcessControlBlock {
         // create main thread of child process
         let task = Arc::new(TaskStruct::new(
             Arc::clone(&child),
+            0,
+            __user::new(0 as *mut u32),
             parent
                 .get_task(0)
                 .inner_exclusive_access()

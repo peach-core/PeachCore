@@ -1,17 +1,26 @@
-use core::intrinsics::atomic_load_acquire;
+use core::{
+    arch::asm,
+    intrinsics::atomic_load_acquire,
+};
 
+use log::trace;
 use shared_defination::error::EAGAIN;
 
 use crate::{
     mm::translated_refmut,
-    syscall::user_space::__user,
+    syscall::{
+        process::sys_yield,
+        user_space::__user,
+    },
     task::{
         add_task,
         block_current_and_run_next,
         current_process,
         current_task,
         current_user_token,
+        suspend_current_and_run_next,
         wait_queue::WaitQueue,
+        wakeup_task,
         TaskStatus,
     },
 };
@@ -92,6 +101,9 @@ pub fn sys_futex_wait(
     }
     let wait_queue = futex_table.get_mut(&key).unwrap();
     let mut lock_guard = wait_queue.lock();
+    drop(futex_table);
+    drop(process_inner);
+    drop(process);
 
     /* check *uaddr and expected. if not eq, return EAGAIN right away. else block current task
      * and add to futex wait list. */
@@ -108,7 +120,7 @@ pub fn sys_futex_wait(
 
     drop(lock_guard);
     block_current_and_run_next();
-
+    trace!("wakeup");
     0
 }
 
@@ -133,7 +145,7 @@ pub fn sys_futex_wake(uaddr: __user<*mut u32>, futex_op: isize, num_threads: u32
             let mut task_inner = task.inner_exclusive_access();
             task_inner.task_status = TaskStatus::Ready;
             drop(task_inner);
-            add_task(task);
+            wakeup_task(task);
             count += 1;
         } else {
             break;
