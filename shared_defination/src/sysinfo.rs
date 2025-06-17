@@ -6,7 +6,7 @@ pub const KERNEL_VERSION: &str = "PeachOS" ;
 pub const MACHINE: &str = "riscv64" ;
 
 pub struct Sysinfo {
-    pub os_name: [char; 10],
+    pub os_name: [u8; 10],
     pub node_name: [u8; 10],
     pub kernel_release: [u8; 10],
     pub kernel_version: [u8; 10],

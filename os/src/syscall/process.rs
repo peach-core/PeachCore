@@ -1,5 +1,3 @@
-use core::ptr::null;
-
 use crate::{
     fs::{
         open_file,
@@ -30,6 +28,7 @@ use alloc::{
     vec::Vec,
     collections::VecDeque,
 };
+use shared_defination::times::tms;
 
 use super::{user_space::__user, TimeVal};
 
@@ -216,14 +215,14 @@ pub fn sys_kill(pid: usize, signal: u32) -> isize {
 
 pub fn sys_times(times: usize) -> isize {
     let process = current_process();
-    let tms = (process.inner_exclusive_access().memory_set.translate_va(times)) as *mut [usize; 4];
+    let tms = (process.inner_exclusive_access().memory_set.translate_va(times)) as *mut tms;
     if tms as usize != 0{
         for tcb in &(process.inner_exclusive_access().tasks) {
             if let Some(task) = (*tcb).as_ref() {
                 let task_inner = task.inner_exclusive_access();
                 unsafe{
-                    (*tms)[0] += task_inner.cpu_usrtime_accumulation;
-                    (*tms)[1] += task_inner.cpu_systime_accumulation;
+                    (*tms).tms_usrtime += task_inner.cpu_usrtime_accumulation;
+                    (*tms).tms_systime += task_inner.cpu_systime_accumulation;
                 }
             }
         }
@@ -236,8 +235,8 @@ pub fn sys_times(times: usize) -> isize {
                         if let Some(task) = (*child_tcb).as_ref() {
                             let task_inner = task.inner_exclusive_access();
                             unsafe{
-                                (*tms)[2] += task_inner.cpu_usrtime_accumulation;
-                                (*tms)[3] += task_inner.cpu_systime_accumulation;
+                                (*tms).tms_child_usrtime += task_inner.cpu_usrtime_accumulation;
+                                (*tms).tms_child_systime += task_inner.cpu_systime_accumulation;
                             }
                         }
                     }
