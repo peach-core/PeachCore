@@ -31,7 +31,7 @@ impl<I: Inode> OSInode<I> {
         }
     }
     pub fn read_all(&self) -> Vec<u8> {
-        let mut inner = self.inner.exclusive_access();
+        let mut inner = self.inner.try_exclusive_access().unwrap();
         let mut buf = [0u8; 512];
         let mut v = Vec::new();
         loop {
@@ -118,7 +118,7 @@ impl<I: Inode> File for OSInode<I> {
         self.writable
     }
     fn read(&self, mut buf: UserBuffer) -> usize {
-        let mut inner = self.inner.exclusive_access();
+        let mut inner = self.inner.try_exclusive_access().unwrap();
         let mut tot = 0;
         for slice in buf.buffers.iter_mut() {
             let n = inner.inode.read_at(inner.offset, slice);
@@ -131,7 +131,7 @@ impl<I: Inode> File for OSInode<I> {
         tot
     }
     fn write(&self, buf: UserBuffer) -> usize {
-        let mut inner = self.inner.exclusive_access();
+        let mut inner = self.inner.try_exclusive_access().unwrap();
         let mut tot = 0;
         for slice in buf.buffers.iter() {
             let n = inner.inode.write_at(inner.offset, slice);

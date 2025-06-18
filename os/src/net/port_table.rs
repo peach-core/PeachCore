@@ -25,7 +25,7 @@ lazy_static! {
 }
 
 pub fn listen(port: u16) -> Option<usize> {
-    let mut listen_table = LISTEN_TABLE.exclusive_access();
+    let mut listen_table = LISTEN_TABLE.try_exclusive_access().unwrap();
     let mut index = usize::MAX;
     for i in 0..listen_table.len() {
         if listen_table[i].is_none() {
@@ -51,7 +51,7 @@ pub fn listen(port: u16) -> Option<usize> {
 
 // can accept request
 pub fn accept(listen_index: usize, task: Arc<TaskStruct>) {
-    let mut listen_table = LISTEN_TABLE.exclusive_access();
+    let mut listen_table = LISTEN_TABLE.try_exclusive_access().unwrap();
     assert!(listen_index < listen_table.len());
     let listen_port = listen_table[listen_index].as_mut();
     assert!(listen_port.is_some());
@@ -61,7 +61,7 @@ pub fn accept(listen_index: usize, task: Arc<TaskStruct>) {
 }
 
 pub fn port_acceptable(listen_index: usize) -> bool {
-    let mut listen_table = LISTEN_TABLE.exclusive_access();
+    let mut listen_table = LISTEN_TABLE.try_exclusive_access().unwrap();
     assert!(listen_index < listen_table.len());
 
     let listen_port = listen_table[listen_index].as_mut();
@@ -123,7 +123,7 @@ impl PortFd {
 
 impl Drop for PortFd {
     fn drop(&mut self) {
-        LISTEN_TABLE.exclusive_access()[self.0] = None
+        LISTEN_TABLE.try_exclusive_access().unwrap()[self.0] = None
     }
 }
 

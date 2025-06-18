@@ -30,7 +30,7 @@ pub struct TaskStruct {
 
 impl TaskStruct {
     pub fn inner_exclusive_access(&self) -> UPIntrRefMut<'_, TaskControlBlockInner> {
-        self.inner.exclusive_access()
+        self.inner.try_exclusive_access().unwrap()
     }
 
     pub fn get_user_token(&self) -> usize {

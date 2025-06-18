@@ -103,7 +103,7 @@ pub fn rust_main() -> ! {
     // debug_log();
     task::add_kpthread();
     task::add_initproc();
-    *DEV_NON_BLOCKING_ACCESS.exclusive_access() = true;
+    *DEV_NON_BLOCKING_ACCESS.try_exclusive_access().unwrap() = true;
     timer::set_next_trigger();
     task::run_tasks();
     panic!("Unreachable in rust_main!");

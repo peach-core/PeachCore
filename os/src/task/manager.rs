@@ -40,7 +40,7 @@ lazy_static! {
 }
 
 pub fn add_task(task: Arc<TaskStruct>) {
-    TASK_MANAGER.exclusive_access().add(task);
+    TASK_MANAGER.try_exclusive_access().unwrap().add(task);
 }
 
 pub fn wakeup_task(task: Arc<TaskStruct>) {
@@ -51,20 +51,20 @@ pub fn wakeup_task(task: Arc<TaskStruct>) {
 }
 
 pub fn fetch_task() -> Option<Arc<TaskStruct>> {
-    TASK_MANAGER.exclusive_access().fetch()
+    TASK_MANAGER.try_exclusive_access().unwrap().fetch()
 }
 
 pub fn pid2process(pid: usize) -> Option<Arc<ProcessControlBlock>> {
-    let map = PID2PCB.exclusive_access();
+    let map = PID2PCB.try_exclusive_access().unwrap();
     map.get(&pid).map(Arc::clone)
 }
 
 pub fn insert_into_pid2process(pid: usize, process: Arc<ProcessControlBlock>) {
-    PID2PCB.exclusive_access().insert(pid, process);
+    PID2PCB.try_exclusive_access().unwrap().insert(pid, process);
 }
 
 pub fn remove_from_pid2process(pid: usize) {
-    let mut map = PID2PCB.exclusive_access();
+    let mut map = PID2PCB.try_exclusive_access().unwrap();
     if map.remove(&pid).is_none() {
         panic!("cannot find pid {} in pid2task!", pid);
     }

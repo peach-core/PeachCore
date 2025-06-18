@@ -54,7 +54,7 @@ pub fn net_interrupt_handler() {
 
     let packet = LOSE_NET_STACK
         .0
-        .exclusive_access()
+        .try_exclusive_access().unwrap()
         .analysis(&recv_buf[..len]);
 
     // println!("[kernel] receive a packet");
@@ -62,7 +62,7 @@ pub fn net_interrupt_handler() {
 
     match packet {
         Packet::ARP(arp_packet) => {
-            let lose_stack = LOSE_NET_STACK.0.exclusive_access();
+            let lose_stack = LOSE_NET_STACK.0.try_exclusive_access().unwrap();
             let reply_packet = arp_packet
                 .reply_packet(lose_stack.ip, lose_stack.mac)
                 .expect("can't build reply");

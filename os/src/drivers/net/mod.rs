@@ -27,14 +27,14 @@ pub struct VirtIONetWrapper(UPIntrFreeCell<VirtIONet<'static, VirtioHal>>);
 impl NetDevice for VirtIONetWrapper {
     fn transmit(&self, data: &[u8]) {
         self.0
-            .exclusive_access()
+            .try_exclusive_access().unwrap()
             .send(data)
             .expect("can't send data")
     }
 
     fn receive(&self, data: &mut [u8]) -> usize {
         self.0
-            .exclusive_access()
+            .try_exclusive_access().unwrap()
             .recv(data)
             .expect("can't receive data")
     }

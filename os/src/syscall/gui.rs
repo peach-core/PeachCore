@@ -22,7 +22,7 @@ pub fn sys_framebuffer() -> isize {
     let fb_start_vpn = VirtAddr::from(FB_VADDR).floor();
     let pn_offset = fb_start_ppn.0 as isize - fb_start_vpn.0 as isize;
 
-    let current_process = current_process();
+    let current_process = current_process().unwrap();
     let mut inner = current_process.inner_exclusive_access();
     inner.memory_set.push(
         MapArea::new(

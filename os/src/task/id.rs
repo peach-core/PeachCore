@@ -66,12 +66,12 @@ pub const IDLE_PID: usize = 0;
 pub struct PidHandle(pub usize);
 
 pub fn pid_alloc() -> PidHandle {
-    PidHandle(PID_ALLOCATOR.exclusive_access().alloc())
+    PidHandle(PID_ALLOCATOR.try_exclusive_access().unwrap().alloc())
 }
 
 impl Drop for PidHandle {
     fn drop(&mut self) {
-        PID_ALLOCATOR.exclusive_access().dealloc(self.0);
+        PID_ALLOCATOR.try_exclusive_access().unwrap().dealloc(self.0);
     }
 }
 
@@ -85,9 +85,9 @@ pub fn kernel_stack_position(kstack_id: usize) -> (usize, usize) {
 pub struct KernelStack(pub usize);
 
 pub fn kstack_alloc() -> KernelStack {
-    let kstack_id = KSTACK_ALLOCATOR.exclusive_access().alloc();
+    let kstack_id = KSTACK_ALLOCATOR.try_exclusive_access().unwrap().alloc();
     let (kstack_bottom, kstack_top) = kernel_stack_position(kstack_id);
-    KERNEL_SPACE.exclusive_access().insert_framed_area(
+    KERNEL_SPACE.try_exclusive_access().unwrap().insert_framed_area(
         kstack_bottom.into(),
         kstack_top.into(),
         MapPermission::R | MapPermission::W,
@@ -100,9 +100,9 @@ impl Drop for KernelStack {
         let (kernel_stack_bottom, _) = kernel_stack_position(self.0);
         let kernel_stack_bottom_va: VirtAddr = kernel_stack_bottom.into();
         KERNEL_SPACE
-            .exclusive_access()
+            .try_exclusive_access().unwrap()
             .remove_area_with_start_vpn(kernel_stack_bottom_va.into());
-        KSTACK_ALLOCATOR.exclusive_access().dealloc(self.0);
+        KSTACK_ALLOCATOR.try_exclusive_access().unwrap().dealloc(self.0);
     }
 }
 

@@ -48,7 +48,7 @@ pub fn sys_getpid() -> isize {
 }
 
 pub fn sys_getcwd(buf: __user<*const u8>, buf_len: usize) -> isize {
-    let process = current_process();
+    let process = current_process().unwrap();
     let cwd = process.getcwd();
     if buf_len <= cwd.len() {
         return 0;
@@ -69,22 +69,22 @@ pub fn sys_getcwd(buf: __user<*const u8>, buf_len: usize) -> isize {
 
 pub fn sys_chdir(path: __user<*const u8>) -> isize {
     let new = translated_str(current_user_token(), path);
-    current_process().chdir(new.as_str())
+    current_process().unwrap().chdir(new.as_str())
 }
 
 pub fn sys_fchdir(fd: usize) -> isize {
-    current_process().fchdir(fd)
+    current_process().unwrap().fchdir(fd)
 }
 
 // TODO
 pub fn sys_mkdirat(_dfd: isize, name: __user<*const u8>, _mode: usize) -> isize {
     let new = translated_str(current_user_token(), name);
-    current_process().mkdirat(new.as_str())
+    current_process().unwrap().mkdirat(new.as_str())
 }
 
 pub fn sys_unlinkat(_dfd: isize, name: __user<*const u8>) -> isize {
     let new = translated_str(current_user_token(), name);
-    current_process().unlinkat(new.as_str())
+    current_process().unwrap().unlinkat(new.as_str())
 }
 
 #[allow(unused)]
@@ -105,7 +105,7 @@ pub fn sys_linkat(
 }
 
 pub fn sys_fork() -> isize {
-    let current_process = current_process();
+    let current_process = current_process().unwrap();
     let new_process = current_process.fork();
     let new_pid = new_process.getpid();
     // modify trap context of new_task, because it returns immediately after switching
@@ -134,7 +134,7 @@ pub fn sys_exec(path: __user<*const u8>, mut args: __user<*const usize>) -> isiz
     }
     if let Some(app_inode) = open_file(path.as_str(), OpenFlags::RDONLY) {
         let all_data = app_inode.read_all();
-        let process = current_process();
+        let process = current_process().unwrap();
         let argc = args_vec.len();
         process.exec(all_data.as_slice(), args_vec);
         // return argc because cx.x[10] will be covered with it later
@@ -147,7 +147,7 @@ pub fn sys_exec(path: __user<*const u8>, mut args: __user<*const usize>) -> isiz
 /// If there is not a child process whose pid is same as given, return -1.
 /// Else if there is a child process but it is still running, return -2.
 pub fn sys_waitpid(pid: isize, exit_code_ptr: __user<*mut i32>) -> isize {
-    let process = current_process();
+    let process = current_process().unwrap();
     // find a child process
 
     let mut inner = process.inner_exclusive_access();

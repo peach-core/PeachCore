@@ -63,7 +63,7 @@ impl VirtIOGpuWrapper {
 
 impl GpuDevice for VirtIOGpuWrapper {
     fn flush(&self) {
-        self.gpu.exclusive_access().flush().unwrap();
+        self.gpu.try_exclusive_access().unwrap().flush().unwrap();
     }
     fn get_framebuffer(&self) -> &mut [u8] {
         unsafe {

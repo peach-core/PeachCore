@@ -21,7 +21,7 @@ use super::user_space::__user;
 
 pub fn sys_write(fd: usize, buf: __user<*const u8>, len: usize) -> isize {
     let token = current_user_token();
-    let process = current_process();
+    let process = current_process().unwrap();
     let inner = process.inner_exclusive_access();
     if fd >= inner.fd_table.len() {
         return -1;
@@ -41,7 +41,7 @@ pub fn sys_write(fd: usize, buf: __user<*const u8>, len: usize) -> isize {
 
 pub fn sys_read(fd: usize, buf: __user<*const u8>, len: usize) -> isize {
     let token = current_user_token();
-    let process = current_process();
+    let process = current_process().unwrap();
     let inner = process.inner_exclusive_access();
     if fd >= inner.fd_table.len() {
         log::error!("sys_read: fd {} out of bounds", fd);
@@ -68,7 +68,7 @@ pub fn sys_openat(dirfd: i32, path: __user<*const u8>, flags: i32) -> isize {
     let token = current_user_token();
     let path_str = translated_str(token, path);
     let path_str = path_str.strip_prefix("./").unwrap_or(&path_str);
-    let process = current_process();
+    let process = current_process().unwrap();
     let open_flags = OpenFlags::from_bits(flags).unwrap_or(OpenFlags::empty());
 
     let file_opt = if path_str.starts_with("/") || dirfd == AT_FDCWD {
@@ -103,7 +103,7 @@ pub fn sys_openat(dirfd: i32, path: __user<*const u8>, flags: i32) -> isize {
     }
 }
 pub fn sys_close(fd: usize) -> isize {
-    let process = current_process();
+    let process = current_process().unwrap();
     let mut inner = process.inner_exclusive_access();
     if fd >= inner.fd_table.len() {
         return -1;
@@ -116,7 +116,7 @@ pub fn sys_close(fd: usize) -> isize {
 }
 
 pub fn sys_pipe(pipe: __user<*mut usize>) -> isize {
-    let process = current_process();
+    let process = current_process().unwrap();
     let token = current_user_token();
     let mut inner = process.inner_exclusive_access();
     let (pipe_read, pipe_write) = make_pipe();
@@ -130,7 +130,7 @@ pub fn sys_pipe(pipe: __user<*mut usize>) -> isize {
 }
 
 pub fn sys_dup(fd: usize) -> isize {
-    let process = current_process();
+    let process = current_process().unwrap();
     let mut inner = process.inner_exclusive_access();
     if fd >= inner.fd_table.len() {
         return -1;

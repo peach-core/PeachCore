@@ -34,7 +34,7 @@ impl Semaphore {
     }
 
     pub fn up(&self) {
-        let mut inner = self.inner.exclusive_access();
+        let mut inner = self.inner.try_exclusive_access().unwrap();
         inner.count += 1;
         if inner.count <= 0
             && let Some(task) = inner.wait_queue.pop_front()
@@ -44,7 +44,7 @@ impl Semaphore {
     }
 
     pub fn down(&self) {
-        let mut inner = self.inner.exclusive_access();
+        let mut inner = self.inner.try_exclusive_access().unwrap();
         inner.count -= 1;
         if inner.count < 0 {
             inner.wait_queue.push_back(current_task().unwrap());

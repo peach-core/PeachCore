@@ -37,7 +37,7 @@ impl Condvar {
     }
 
     pub fn signal(&self) {
-        let mut inner = self.inner.exclusive_access();
+        let mut inner = self.inner.try_exclusive_access().unwrap();
         if let Some(task) = inner.wait_queue.pop_front() {
             wakeup_task(task);
         }
@@ -45,7 +45,7 @@ impl Condvar {
 
     /*
     pub fn wait(&self) {
-        let mut inner = self.inner.exclusive_access();
+        let mut inner = self.inner.try_exclusive_access().unwrap();
         inner.wait_queue.push_back(current_task().unwrap());
         drop(inner);
         block_current_and_run_next();

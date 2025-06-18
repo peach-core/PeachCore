@@ -39,7 +39,7 @@ impl<I: Inode> DirStruct<I> {
     }
 
     pub fn get_current_inode(&self) -> Arc<I> {
-        let inner = self.inner.exclusive_access();
+        let inner = self.inner.try_exclusive_access().unwrap();
         let os_inode = inner.path.inode.clone();
         drop(inner);
         os_inode
@@ -50,29 +50,29 @@ impl<I: Inode> DirStruct<I> {
     /// TODO: only an interface now. To realize it, we need support by fs. `fs.find(path) ->
     /// dyn Inode`
     pub fn chdir(&self, path: &str) -> isize {
-        let mut inner = self.inner.exclusive_access();
+        let mut inner = self.inner.try_exclusive_access().unwrap();
         inner.path.cwd = String::from_str(path).unwrap();
         0
     }
 
     pub fn getcwd(&self) -> String {
-        let inner = self.inner.exclusive_access();
+        let inner = self.inner.try_exclusive_access().unwrap();
         inner.path.cwd.clone()
     }
 
     pub fn mkdirat(&self, name: &str) -> Option<Arc<I>> {
-        let inner = self.inner.exclusive_access();
+        let inner = self.inner.try_exclusive_access().unwrap();
         let o_inode = inner.path.inode.clone();
         drop(inner);
         let inode = o_inode.mkdir(name)?;
-        let mut inner = self.inner.exclusive_access();
+        let mut inner = self.inner.try_exclusive_access().unwrap();
         inner.path.cwd.push('/');
         inner.path.cwd.push_str(name);
         Some(inode)
     }
 
     pub fn rmdirat(&self, name: &str) -> Option<Arc<I>> {
-        let mut inner = self.inner.exclusive_access();
+        let mut inner = self.inner.try_exclusive_access().unwrap();
         let inode = inner.path.inode.rmdir(name)?;
         if let Some(pos) = inner.path.cwd.rfind('/') {
             inner.path.cwd.truncate(pos);

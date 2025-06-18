@@ -127,7 +127,7 @@ impl ProcessControlBlockInner {
 
 impl ProcessControlBlock {
     pub fn inner_exclusive_access(&self) -> UPIntrRefMut<'_, ProcessControlBlockInner> {
-        self.inner.exclusive_access()
+        self.inner.try_exclusive_access().unwrap()
     }
 
     pub fn new(elf_data: &[u8]) -> Arc<Self> {
@@ -175,7 +175,7 @@ impl ProcessControlBlock {
         *trap_ctx = TrapContext::app_init_context(
             entry_point,
             ustack_top,
-            KERNEL_SPACE.exclusive_access().token(),
+            KERNEL_SPACE.try_exclusive_access().unwrap().token(),
             kstack_top,
             trap_handler as usize,
         );
@@ -232,7 +232,7 @@ impl ProcessControlBlock {
         task.kstack.push_on_top(TrapContext::kpthread_init_context(
             kernel_thread_entry,
             ustack_top,
-            KERNEL_SPACE.exclusive_access().token(),
+            KERNEL_SPACE.try_exclusive_access().unwrap().token(),
             kstack_top,
             trap_handler as usize,
         ));
@@ -290,7 +290,7 @@ impl ProcessControlBlock {
         let mut trap_ctx = TrapContext::app_init_context(
             entry_point,
             user_sp,
-            KERNEL_SPACE.exclusive_access().token(),
+            KERNEL_SPACE.try_exclusive_access().unwrap().token(),
             task.kstack.get_top(),
             trap_handler as usize,
         );

@@ -190,7 +190,7 @@ pub fn trap_from_kernel(_trap_ctx: &TrapContext) {
         _ => {
             panic!(
                 "pid: {} Unsupported trap from kernel: {:?}, stval = {:#x}!",
-                current_process().getpid(),
+                current_process().map(|p| p.getpid()).unwrap_or(0),
                 scause.cause(),
                 stval
             );
@@ -236,7 +236,7 @@ pub fn kpthread_trap_handler(ctx: &mut TrapContext) -> ! {
         _ => {
             panic!(
                 "pid: {}, Unsupported trap {:?}, stval = {:#x}!",
-                current_process().getpid(),
+                current_process().unwrap().getpid(),
                 scause.cause(),
                 stval
             );

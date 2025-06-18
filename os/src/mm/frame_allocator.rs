@@ -111,7 +111,7 @@ pub fn init_frame_allocator() {
     unsafe extern "C" {
         fn ekernel();
     }
-    FRAME_ALLOCATOR.exclusive_access().init(
+    FRAME_ALLOCATOR.try_exclusive_access().unwrap().init(
         PhysAddr::from(ekernel as usize).ceil(),
         PhysAddr::from(MEMORY_END).floor(),
     );
@@ -119,20 +119,20 @@ pub fn init_frame_allocator() {
 
 pub fn frame_alloc() -> Option<FrameTracker> {
     FRAME_ALLOCATOR
-        .exclusive_access()
+        .try_exclusive_access().unwrap()
         .alloc()
         .map(FrameTracker::new)
 }
 
 pub fn frame_alloc_more(num: usize) -> Option<Vec<FrameTracker>> {
     FRAME_ALLOCATOR
-        .exclusive_access()
+        .try_exclusive_access().unwrap()
         .alloc_more(num)
         .map(|x| x.iter().map(|&t| FrameTracker::new(t)).collect())
 }
 
 pub fn frame_dealloc(ppn: PhysPageNum) {
-    FRAME_ALLOCATOR.exclusive_access().dealloc(ppn);
+    FRAME_ALLOCATOR.try_exclusive_access().unwrap().dealloc(ppn);
 }
 
 #[allow(unused)]

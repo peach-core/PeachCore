@@ -31,7 +31,7 @@ impl MutexSpin {
 impl Mutex for MutexSpin {
     fn lock(&self) {
         loop {
-            let mut locked = self.locked.exclusive_access();
+            let mut locked = self.locked.try_exclusive_access().unwrap();
             if *locked {
                 drop(locked);
                 suspend_current_and_run_next();
@@ -44,7 +44,7 @@ impl Mutex for MutexSpin {
     }
 
     fn unlock(&self) {
-        let mut locked = self.locked.exclusive_access();
+        let mut locked = self.locked.try_exclusive_access().unwrap();
         *locked = false;
     }
 }
@@ -73,7 +73,7 @@ impl MutexBlocking {
 
 impl Mutex for MutexBlocking {
     fn lock(&self) {
-        let mut mutex_inner = self.inner.exclusive_access();
+        let mut mutex_inner = self.inner.try_exclusive_access().unwrap();
         if mutex_inner.locked {
             mutex_inner.wait_queue.push_back(current_task().unwrap());
             drop(mutex_inner);
@@ -84,7 +84,7 @@ impl Mutex for MutexBlocking {
     }
 
     fn unlock(&self) {
-        let mut mutex_inner = self.inner.exclusive_access();
+        let mut mutex_inner = self.inner.try_exclusive_access().unwrap();
         assert!(mutex_inner.locked);
         if let Some(waking_task) = mutex_inner.wait_queue.pop_front() {
             wakeup_task(waking_task);

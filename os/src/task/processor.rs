@@ -44,7 +44,7 @@ lazy_static! {
 
 pub fn run_tasks() {
     loop {
-        let mut processor = PROCESSOR.exclusive_access();
+        let mut processor = PROCESSOR.try_exclusive_access().unwrap();
         if let Some(task) = fetch_task() {
             let idle_task_ctx_ptr = processor.get_idle_task_ctx_ptr();
             // access coming task TCB exclusively
@@ -65,15 +65,15 @@ pub fn run_tasks() {
 }
 
 pub fn take_current_task() -> Option<Arc<TaskStruct>> {
-    PROCESSOR.exclusive_access().take_current()
+    PROCESSOR.try_exclusive_access().unwrap().take_current()
 }
 
 pub fn current_task() -> Option<Arc<TaskStruct>> {
-    PROCESSOR.exclusive_access().current()
+    PROCESSOR.try_exclusive_access().unwrap().current()
 }
 
-pub fn current_process() -> Arc<ProcessControlBlock> {
-    current_task().unwrap().process.upgrade().unwrap()
+pub fn current_process() -> Option<Arc<ProcessControlBlock>> {
+    current_task()?.process.upgrade()
 }
 
 pub fn current_user_token() -> usize {

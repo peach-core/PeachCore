@@ -1,3 +1,5 @@
+use core::cell::LazyCell;
+
 use alloc::sync::Arc;
 use redoxfs::{
     FileSystem,
@@ -38,7 +40,6 @@ const SECTOR_SIZE: usize = 512; // VIRTIOBlock has 512 bytes per block
 
 impl<B: BlockDevice> redoxfs::Disk for CoreDisk<B> {
     unsafe fn read_at(&mut self, block: u64, buffer: &mut [u8]) -> Result<usize> {
-        
         for (i, chunk) in buffer.chunks_mut(SECTOR_SIZE).enumerate() {
             let blk = (block * 8) as usize + i;
             self.0.read_block(blk, chunk);
@@ -48,7 +49,6 @@ impl<B: BlockDevice> redoxfs::Disk for CoreDisk<B> {
     }
 
     unsafe fn write_at(&mut self, block: u64, buffer: &[u8]) -> Result<usize> {
-        
         for (i, chunk) in buffer.chunks(SECTOR_SIZE).enumerate() {
             let blk = (block * 8) as usize + i;
             self.0.write_block(blk, chunk);
@@ -67,10 +67,22 @@ impl super::FileSystemTrait for FileSystem<CoreDisk<Arc<VirtIOBlock>>> {
     type Inode = RefoxInode<CoreDisk<Arc<VirtIOBlock>>>;
 
     fn get_root_inode() -> alloc::sync::Arc<Self::Inode> {
-        let block_dev = VirtIOBlock::instance();
-        let disk = CoreDisk(block_dev);
-        let fs = FileSystem::open(disk, None, None, false).expect("Failed to open RedoxFS disk");
-        let fs = Arc::new(Mutex::new(fs));
-        Arc::new(RefoxInode::new(fs, TreePtr::root()))
+        fn init_root_inode() -> Arc<RefoxInode<CoreDisk<Arc<VirtIOBlock>>>> {
+            let root_inode = RefoxInode::new(
+                Arc::new(Mutex::new(
+                    FileSystem::open(CoreDisk(VirtIOBlock::instance()), None, None, false)
+                        .expect("Failed to open RedoxFS disk"),
+                )),
+                TreePtr::root(),
+            );
+            Arc::new(root_inode)
+        }
+
+        lazy_static::lazy_static! {
+            static ref ROOT_INODE: Arc<RefoxInode<CoreDisk<Arc<VirtIOBlock>>>> =
+                init_root_inode();
+        }
+
+        ROOT_INODE.clone()
     }
 }

@@ -185,13 +185,13 @@ pub fn add_initproc() {
 }
 
 pub fn check_signals_of_current() -> Option<(i32, &'static str)> {
-    let process = current_process();
+    let process = current_process().unwrap();
     let process_inner = process.inner_exclusive_access();
     process_inner.signals.check_error()
 }
 
 pub fn current_add_signal(signal: SignalFlags) {
-    let process = current_process();
+    let process = current_process().unwrap();
     let mut process_inner = process.inner_exclusive_access();
     process_inner.signals |= signal;
 }
