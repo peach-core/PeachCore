@@ -86,14 +86,13 @@ where
 
     fn create(&self, name: &str) -> Option<Arc<Self>> {
         let current_time = timer::get_time_ms();
-        let mode = 0o644; // Default file mode, can be adjusted as needed
         self.fs
             .lock()
             .tx(|tx| {
                 tx.create_node(
                     self.node_ptr,
                     name,
-                    mode,
+                    Node::MODE_FILE | 0o644,
                     current_time as u64,
                     (current_time % 1_000_000) as u32,
                 )
@@ -136,10 +135,37 @@ where
     }
 
     fn mkdir(&self, name: &str) -> Option<Arc<Self>> {
-        todo!()
+        self.fs
+            .lock()
+            .tx(|tx| {
+                let current_time = timer::get_time_ms();
+                tx.create_node(
+                    self.node_ptr,
+                    name,
+                    Node::MODE_DIR | 0o755, // Default directory mode
+                    current_time as u64,
+                    (current_time % 1_000_000) as u32,
+                )
+            })
+            .ok()
+            .map(|node| {
+                Arc::new(RefoxInode {
+                    fs: self.fs.clone(),
+                    node_ptr: node.ptr(),
+                })
+            })
     }
 
     fn rmdir(&self, name: &str) -> Option<Arc<Self>> {
-        todo!()
+        self.fs
+            .lock()
+            .tx(|tx| tx.remove_node(self.node_ptr, name, Node::MODE_DIR))
+            .ok()
+            .map(|_| {
+                Arc::new(RefoxInode {
+                    fs: self.fs.clone(),
+                    node_ptr: TreePtr::new(0),
+                })
+            })
     }
 }

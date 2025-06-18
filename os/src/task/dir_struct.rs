@@ -61,8 +61,11 @@ impl<I: Inode> DirStruct<I> {
     }
 
     pub fn mkdirat(&self, name: &str) -> Option<Arc<I>> {
+        let inner = self.inner.exclusive_access();
+        let o_inode = inner.path.inode.clone();
+        drop(inner);
+        let inode = o_inode.mkdir(name)?;
         let mut inner = self.inner.exclusive_access();
-        let inode = inner.path.inode.mkdir(name)?;
         inner.path.cwd.push('/');
         inner.path.cwd.push_str(name);
         Some(inode)

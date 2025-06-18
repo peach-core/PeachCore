@@ -6,7 +6,7 @@ use super::{
     OpenFlags,
     SysFileSystem,
 };
-use crate::mm::UserBuffer;
+use crate::{fs::Inode, mm::UserBuffer};
 
 pub trait File: Send + Sync {
     fn readable(&self) -> bool;
@@ -29,7 +29,7 @@ pub fn open_file(
     } else {
         let inode = root.find(name)?;
         if flags.contains(OpenFlags::TRUNC) {
-            inode.clear()
+            inode.clear();
         }
         Some(Arc::new(OSInode::new(r, w, inode)))
     }

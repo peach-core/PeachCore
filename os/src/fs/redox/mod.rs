@@ -14,7 +14,7 @@ use crate::drivers::block::VirtIOBlock;
 
 use super::BlockDevice;
 
-struct CoreDisk<B: BlockDevice>(pub B);
+pub struct CoreDisk<B: BlockDevice>(pub B);
 
 impl<T: BlockDevice> BlockDevice for Arc<T> {
     fn read_block(&self, block_id: usize, buf: &mut [u8]) {
@@ -34,21 +34,31 @@ impl<T: BlockDevice> BlockDevice for Arc<T> {
     }
 }
 
+const SECTOR_SIZE: usize = 512; // VIRTIOBlock has 512 bytes per block
+
 impl<B: BlockDevice> redoxfs::Disk for CoreDisk<B> {
     unsafe fn read_at(&mut self, block: u64, buffer: &mut [u8]) -> Result<usize> {
-        self.0.read_block(block as usize, buffer);
+        
+        for (i, chunk) in buffer.chunks_mut(SECTOR_SIZE).enumerate() {
+            let blk = (block * 8) as usize + i;
+            self.0.read_block(blk, chunk);
+        }
 
         Ok(buffer.len())
     }
 
     unsafe fn write_at(&mut self, block: u64, buffer: &[u8]) -> Result<usize> {
-        self.0.write_block(block as usize, buffer);
+        
+        for (i, chunk) in buffer.chunks(SECTOR_SIZE).enumerate() {
+            let blk = (block * 8) as usize + i;
+            self.0.write_block(blk, chunk);
+        }
 
         Ok(buffer.len())
     }
 
     fn size(&mut self) -> Result<u64> {
-        const SIZE: u64 = 512; // VIRTIOBlock has 512 bytes per block
+        const SIZE: u64 = 32 * 2048 * 512; // 32MiB
         Ok(SIZE)
     }
 }

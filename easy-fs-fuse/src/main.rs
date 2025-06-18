@@ -1,31 +1,44 @@
 use clap::{App, Arg};
-use easy_fs::{BlockDevice, EasyFileSystem};
-use std::fs::{read_dir, File, OpenOptions};
+use std::{fs::{read_dir, File, OpenOptions}, os::unix};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::sync::Arc;
 use std::sync::Mutex;
+use redoxfs::{
+    Disk,
+    FileSystem,
+    Node,
+    TreePtr,
+};
+use syscall::Result;
 
-const BLOCK_SZ: usize = 512;
+const BLOCK_SZ: u64 = 4096;
 
 struct BlockFile(Mutex<File>);
 
-impl BlockDevice for BlockFile {
-    fn read_block(&self, block_id: usize, buf: &mut [u8]) {
+impl redoxfs::Disk for BlockFile {
+    unsafe fn read_at(&mut self, block: u64, buffer: &mut [u8]) -> Result<usize> {
+        
         let mut file = self.0.lock().unwrap();
-        file.seek(SeekFrom::Start((block_id * BLOCK_SZ) as u64))
+        file.seek(SeekFrom::Start((block * BLOCK_SZ) as u64))
             .expect("Error when seeking!");
-        assert_eq!(file.read(buf).unwrap(), BLOCK_SZ, "Not a complete block!");
+        assert_eq!(file.read(buffer).unwrap(), buffer.len(), "Not a complete block!");
+
+        Ok(buffer.len())
     }
 
-    fn write_block(&self, block_id: usize, buf: &[u8]) {
+    unsafe fn write_at(&mut self, block: u64, buffer: &[u8]) -> Result<usize> {
+        
         let mut file = self.0.lock().unwrap();
-        file.seek(SeekFrom::Start((block_id * BLOCK_SZ) as u64))
+        file.seek(SeekFrom::Start((block * BLOCK_SZ) as u64))
             .expect("Error when seeking!");
-        assert_eq!(file.write(buf).unwrap(), BLOCK_SZ, "Not a complete block!");
+        assert_eq!(file.write(buffer).unwrap(), buffer.len() as usize, "Not a complete block!");
+
+        Ok(buffer.len())
     }
 
-    fn handle_irq(&self) {
-        unimplemented!();
+    fn size(&mut self) -> Result<u64> {
+        const SIZE: u64 = 32 * 2048 * 512; // 32 MiB
+        Ok(SIZE)
     }
 }
 
@@ -53,7 +66,7 @@ fn easy_fs_pack() -> std::io::Result<()> {
     let src_path = matches.value_of("source").unwrap();
     let target_path = matches.value_of("target").unwrap();
     println!("src_path = {}\ntarget_path = {}", src_path, target_path);
-    let block_file = Arc::new(BlockFile(Mutex::new({
+    let block_file =BlockFile(Mutex::new({
         let f = OpenOptions::new()
             .read(true)
             .write(true)
@@ -61,10 +74,11 @@ fn easy_fs_pack() -> std::io::Result<()> {
             .open(format!("{}{}", "./image/", "fs.img"))?;
         f.set_len(32 * 2048 * 512).unwrap();
         f
-    })));
+    }));
     // 32MiB, at most 4095 files
-    let efs = EasyFileSystem::create(block_file, 32 * 2048, 1);
-    let root_inode = Arc::new(EasyFileSystem::root_inode(&efs));
+
+    let mut fs = FileSystem::create(block_file, None, 0, 0 ).unwrap();
+    let root_inode = TreePtr::root();
     let apps: Vec<_> = read_dir(src_path)
         .unwrap()
         .into_iter()
@@ -80,9 +94,23 @@ fn easy_fs_pack() -> std::io::Result<()> {
         let mut all_data: Vec<u8> = Vec::new();
         host_file.read_to_end(&mut all_data).unwrap();
         // create a file in easy-fs
-        let inode = root_inode.create(app.as_str()).unwrap();
-        // write data to easy-fs
-        inode.write_at(0, all_data.as_slice());
+        fs.tx(|tx| {
+            let node = tx.create_node(
+                root_inode,
+                app.as_str(),
+                Node::MODE_FILE | 0o644,
+                0,
+                0,
+            ).unwrap();
+
+            tx.write_node(
+                node.ptr(),
+                0,
+                all_data.as_slice(),
+                0,
+                0,
+            )
+        }).unwrap();
     }
     // list apps
     // for app in root_inode.ls() {
@@ -120,7 +148,7 @@ fn efs_test() -> std::io::Result<()> {
 
     let mut random_str_test = |len: usize| {
         filea.clear();
-        assert_eq!(filea.read_at(0, &mut buffer), 0,);
+        assert_eq!(filea.read_at(0, &mut buffer).unwrap(), 0,);
         let mut str = String::new();
         use rand;
         // random digit
@@ -132,7 +160,7 @@ fn efs_test() -> std::io::Result<()> {
         let mut offset = 0usize;
         let mut read_str = String::new();
         loop {
-            let len = filea.read_at(offset, &mut read_buffer);
+            let len = filea.read_at(offset as u64, &mut read_buffer).unwrap();
             if len == 0 {
                 break;
             }

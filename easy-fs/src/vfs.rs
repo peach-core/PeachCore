@@ -187,19 +187,13 @@ impl Inode {
     }
 
     pub fn mkdir(&self, name: &str) -> Option<Arc<Inode>> {
-        let op = |root_inode: &mut DiskInode| {
-            assert!(root_inode.is_dir());
-            self.find_inode_id(name, root_inode)
-        };
-
-        if self.modify_disk_inode(op).is_some() {
-            return None;
-        }
         // create a new directory
         // alloc a inode with an indirect block
+        log::info!("create directory {}", name);
         let mut fs = self.fs.lock();
+        log::info!("modify disk inode for root");
         let new_inode_id = fs.alloc_inode();
-        
+        log::info!("alloc inode {}", new_inode_id);
 
         let (new_inode_block_id, new_inode_block_offset) = fs.get_disk_inode_pos(new_inode_id);
         get_block_cache(new_inode_block_id as usize, Arc::clone(&self.block_device))
@@ -207,6 +201,9 @@ impl Inode {
             .modify(new_inode_block_offset, |new_inode: &mut DiskInode| {
                 new_inode.initialize(DiskInodeType::Directory);
             });
+
+        log::info!("create directory inode {} at block {}, offset {}", 
+            new_inode_id, new_inode_block_id, new_inode_block_offset);
         self.modify_disk_inode(|root_inode| {
 
             let file_count = (root_inode.size as usize) / DIRENT_SZ;
@@ -221,6 +218,8 @@ impl Inode {
                 &self.block_device,
             );
         });
+
+        log::info!("directory {} created with inode {}", name, new_inode_id);
 
         let (block_id, block_offset) = fs.get_disk_inode_pos(new_inode_id);
         drop(fs);

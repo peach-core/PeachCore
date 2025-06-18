@@ -1,8 +1,7 @@
-pub mod easyfs;
 pub mod file;
 pub mod os_inode;
 pub mod pipe;
-pub mod redoxfs;
+pub mod redox;
 pub mod stdio;
 pub mod vfs;
 
@@ -19,6 +18,7 @@ pub use stdio::{
 pub use os_inode::*;
 
 pub use vfs::Inode;
+use redox::CoreDisk;
 
 use crate::drivers::block::VirtIOBlock;
 pub use file::{
@@ -26,7 +26,7 @@ pub use file::{
     open_file,
 };
 
-pub type SysFileSystem = easyfs::FileSystem;
+pub type SysFileSystem = redoxfs::FileSystem<CoreDisk<Arc<VirtIOBlock>>>;
 
 pub type SysInode = <SysFileSystem as FileSystemTrait>::Inode;
 pub type SysBlockDevice = VirtIOBlock;
