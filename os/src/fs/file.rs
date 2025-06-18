@@ -28,8 +28,11 @@ pub fn open_file(
         Some(Arc::new(OSInode::new(r, w, inode)))
     } else {
         let inode = root.find(name)?;
+        log::info!("open_file: found file {}", name);
         if flags.contains(OpenFlags::TRUNC) {
+            log::info!("open_file: truncating file {}", name);
             inode.clear();
+            log::info!("open_file: file {} truncated", name);
         }
         Some(Arc::new(OSInode::new(r, w, inode)))
     }

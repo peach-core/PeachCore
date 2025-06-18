@@ -11,7 +11,7 @@ use crate::{
 const LOOP_SIZE: usize = 5;
 
 pub fn main() -> i32 {
-    for i in 0..LOOP_SIZE {
+    for i in 1..=LOOP_SIZE {
         let mut val = 1;
         for i in 1..i * 1e6 as usize {
             val += i;

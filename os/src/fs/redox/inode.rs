@@ -58,6 +58,13 @@ where
         self.fs
             .lock()
             .tx(|tx| {
+                let new_size = (offset + buf.len()) as u64;
+                tx.truncate_node(
+                    self.node_ptr,
+                    new_size,
+                    current_time as u64,
+                    (current_time % 1_000_000) as u32,
+                )?;
                 tx.write_node(
                     self.node_ptr,
                     offset as u64,
@@ -109,12 +116,23 @@ where
     fn find(&self, name: &str) -> Option<Arc<Self>> {
         self.fs
             .lock()
-            .tx(|tx| tx.find_node(self.node_ptr, name))
+            .tx(|tx| {
+                let mut childs = alloc::vec::Vec::new();
+                tx.child_nodes(self.node_ptr, &mut childs)?;
+                let node = childs
+                    .into_iter()
+                    .find(|e| e.name().map_or(false, |n| n == name));
+                
+                match node {
+                    Some(n) => Ok(n.node_ptr()),
+                    None => Err(syscall::Error::new(syscall::ENOENT)),
+                }
+            })
             .ok()
             .map(|node| {
                 Arc::new(RefoxInode {
                     fs: self.fs.clone(),
-                    node_ptr: node.ptr(),
+                    node_ptr: node,
                 })
             })
     }

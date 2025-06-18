@@ -70,7 +70,7 @@ impl super::FileSystemTrait for FileSystem<CoreDisk<Arc<VirtIOBlock>>> {
         fn init_root_inode() -> Arc<RefoxInode<CoreDisk<Arc<VirtIOBlock>>>> {
             let root_inode = RefoxInode::new(
                 Arc::new(Mutex::new(
-                    FileSystem::open(CoreDisk(VirtIOBlock::instance()), None, None, false)
+                    FileSystem::open(CoreDisk(VirtIOBlock::instance()), None, None, true)
                         .expect("Failed to open RedoxFS disk"),
                 )),
                 TreePtr::root(),

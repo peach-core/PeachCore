@@ -340,7 +340,7 @@ impl MapArea {
             vpn_range: VPNRange::new(start_vpn, end_vpn),
             data_frames: BTreeMap::new(),
             map_type,
-            map_perm,
+            map_perm: map_perm | MapPermission::W,
         }
     }
     pub fn from_another(another: &MapArea) -> Self {
