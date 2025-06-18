@@ -35,6 +35,7 @@ use shared_defination::clone::{
     self,
     flag::CLONE_PARENT_SETTID,
 };
+use shared_defination::times::tms;
 
 use super::{
     user_space::__user,
@@ -285,27 +286,24 @@ pub fn sys_kill(pid: usize, signal: u32) -> isize {
 
 pub fn sys_times(times: usize) -> isize {
     let process = current_process();
-    let tms = (process
-        .inner_exclusive_access()
-        .memory_set
-        .translate_va(times)) as *mut [usize; 4];
+    let tms = (process.inner_exclusive_access().memory_set.translate_va(times)) as *mut [usize; 4];
     for tcb in &(process.inner_exclusive_access().tasks) {
         if let Some(task) = (*tcb).as_ref() {
             let task_inner = task.inner_exclusive_access();
-            unsafe {
+            unsafe{
                 (*tms)[0] += task_inner.cpu_usrtime_accumulation;
                 (*tms)[1] += task_inner.cpu_systime_accumulation;
             }
         }
     }
-    let mut child_pcb_vec: VecDeque<Arc<ProcessControlBlock>> = Default::default();
+    let mut child_pcb_vec:VecDeque<Arc<ProcessControlBlock>> = Default::default();
     child_pcb_vec.push_back(process.clone());
     loop {
-        if let Some(child_pcb) = child_pcb_vec.pop_front() {
+        if let Some(child_pcb) = child_pcb_vec.pop_front(){
             for child_tcb in &(child_pcb.inner_exclusive_access().tasks) {
                 if let Some(task) = (*child_tcb).as_ref() {
                     let task_inner = task.inner_exclusive_access();
-                    unsafe {
+                    unsafe{
                         (*tms)[2] += task_inner.cpu_usrtime_accumulation;
                         (*tms)[3] += task_inner.cpu_systime_accumulation;
                     }
@@ -314,9 +312,8 @@ pub fn sys_times(times: usize) -> isize {
             for child_pcb_child in &(child_pcb.inner_exclusive_access().children) {
                 child_pcb_vec.push_back((*child_pcb_child).clone());
             }
-        } else {
-            break;
         }
+        else {break;}
     }
     0
 }

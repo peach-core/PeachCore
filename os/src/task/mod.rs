@@ -114,7 +114,6 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     let process = task.process.upgrade().unwrap();
     let tid = task_inner.res.as_ref().unwrap().tid;
 
-    // record exit code
     task_inner.accumulate_usrtime();
     process
         .inner_exclusive_access()
@@ -135,7 +134,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     if task.clone_flags & CLONE_VM != 0 {
         is_thread = true;
     }
-
+    // record exit code
     task_inner.exit_code = Some(exit_code & (0xff));
     task_inner.res = None;
     // here we do not remove the thread since we are still using the kstack
