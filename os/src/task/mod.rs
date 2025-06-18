@@ -113,15 +113,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     let mut task_inner = task.inner_exclusive_access();
     let process = task.process.upgrade().unwrap();
     let tid = task_inner.res.as_ref().unwrap().tid;
-
     task_inner.accumulate_usrtime();
-    process
-        .inner_exclusive_access()
-        .children_exited_systime_accumulation += task_inner.cpu_systime_accumulation;
-    process
-        .inner_exclusive_access()
-        .children_exited_usrtime_accumulation += task_inner.cpu_usrtime_accumulation;
-
     if task.clone_flags & CLONE_CHILD_CLEARTID != 0 {
         const FUTEX_WAKE: isize = 1;
         let uaddr = __user::new(task.ctid_ptr as *mut u32);

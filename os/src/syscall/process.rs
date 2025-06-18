@@ -35,7 +35,7 @@ use shared_defination::clone::{
     self,
     flag::CLONE_PARENT_SETTID,
 };
-use shared_defination::times::tms;
+use shared_defination::times::Tms;
 
 use super::{
     user_space::__user,

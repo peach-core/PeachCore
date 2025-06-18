@@ -36,6 +36,7 @@ mod sync;
 mod syscall;
 mod task;
 mod timer;
+mod string;
 mod trap;
 
 pub use kpthread_test::__start;
