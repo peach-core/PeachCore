@@ -25,7 +25,7 @@ pub use file::*;
 pub use io::*;
 pub use net::*;
 pub use sync::*;
-use syscall::*;
+pub use syscall::*;
 pub use task::*;
 pub use mm::*;
 
