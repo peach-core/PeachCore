@@ -114,15 +114,6 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     let process = task.process.upgrade().unwrap();
     let tid = task_inner.res.as_ref().unwrap().tid;
 
-    // record exit code
-    task_inner.accumulate_usrtime();
-    process
-        .inner_exclusive_access()
-        .children_exited_systime_accumulation += task_inner.cpu_systime_accumulation;
-    process
-        .inner_exclusive_access()
-        .children_exited_usrtime_accumulation += task_inner.cpu_usrtime_accumulation;
-
     if task.clone_flags & CLONE_CHILD_CLEARTID != 0 {
         const FUTEX_WAKE: isize = 1;
         let uaddr = __user::new(task.ctid_ptr as *mut u32);
@@ -130,12 +121,13 @@ pub fn exit_current_and_run_next(exit_code: i32) {
         unsafe { atomic_store_release(addr, 0) };
         sys_futex(uaddr, FUTEX_WAKE, 1, 0, __user::new(0 as *mut u32), 0);
     }
-
+    
     let mut is_thread = false;
     if task.clone_flags & CLONE_VM != 0 {
         is_thread = true;
     }
-
+    
+    // record exit code
     task_inner.exit_code = Some(exit_code & (0xff));
     task_inner.res = None;
     // here we do not remove the thread since we are still using the kstack

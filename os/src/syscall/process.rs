@@ -289,6 +289,7 @@ pub fn sys_times(times: usize) -> isize {
         .inner_exclusive_access()
         .memory_set
         .translate_va(times)) as *mut [usize; 4];
+    let tms = (process.inner_exclusive_access().memory_set.translate_va(times)) as *mut [usize; 4];
     for tcb in &(process.inner_exclusive_access().tasks) {
         if let Some(task) = (*tcb).as_ref() {
             let task_inner = task.inner_exclusive_access();
