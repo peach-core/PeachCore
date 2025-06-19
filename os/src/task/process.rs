@@ -37,6 +37,7 @@ use crate::{
     },
     syscall::user_space::__user,
     task::fd_table::FdTable,
+    timer::get_time,
     trap::{
         trap_handler,
         TrapContext,
@@ -73,6 +74,8 @@ pub struct ProcessControlBlockInner {
     // =====================================================
     pub is_zombie: bool,                                    // is_zombie process
     pub exit_code: i32,                                     // exit code
+    pub cpu_systime_accumulation: usize,
+    pub cpu_usrtime_accumulation: usize,
 
 
     // =====================================================
@@ -209,6 +212,15 @@ impl ProcessControlBlockInner {
         assert_eq!(addr & (PAGE_SIZE - 1), 0);
         self.memory_set.munmap(addr.into())
     }
+
+    #[allow(unused)]
+    pub fn accumulate_usrtime(&mut self, time: usize) {
+        self.cpu_usrtime_accumulation += time;
+    }
+    #[allow(unused)]
+    pub fn accumulate_systime(&mut self, time: usize) {
+        self.cpu_systime_accumulation += time;
+    }
 }
 
 impl ProcessControlBlock {
@@ -243,6 +255,8 @@ impl ProcessControlBlock {
             inner: unsafe {
                 UPIntrFreeCell::new(ProcessControlBlockInner {
                     is_zombie: false,
+                    cpu_systime_accumulation: 0,
+                    cpu_usrtime_accumulation: 0,
                     memory_set,
                     parent: None,
                     children: Vec::new(),
@@ -318,6 +332,8 @@ impl ProcessControlBlock {
             inner: unsafe {
                 UPIntrFreeCell::new(ProcessControlBlockInner {
                     is_zombie: false,
+                    cpu_systime_accumulation: 0,
+                    cpu_usrtime_accumulation: 0,
                     memory_set: MemorySet::new_bare(),
                     parent: None,
                     children: Vec::new(),
@@ -439,6 +455,8 @@ impl ProcessControlBlock {
             inner: unsafe {
                 UPIntrFreeCell::new(ProcessControlBlockInner {
                     is_zombie: false,
+                    cpu_systime_accumulation: 0,
+                    cpu_usrtime_accumulation: 0,
                     memory_set,
                     parent: Some(Arc::downgrade(self)),
                     children: Vec::new(),
@@ -533,5 +551,25 @@ impl ProcessControlBlock {
     pub fn current_task_munmap(&self, addr: usize) -> isize {
         let mut inner = self.inner_exclusive_access();
         inner.current_task_munmap(addr)
+    }
+
+    pub fn accumulate_systime(&self, time: usize) {
+        let mut inner = self.inner_exclusive_access();
+        inner.accumulate_systime(time);
+    }
+
+    pub fn accumulate_usrtime(&self, time: usize) {
+        let mut inner = self.inner_exclusive_access();
+        inner.accumulate_usrtime(time);
+    }
+
+    pub fn get_systime(&self) -> usize {
+        self.inner
+            .exclusive_session(|inner| inner.cpu_systime_accumulation)
+    }
+
+    pub fn get_usrtime(&self) -> usize {
+        self.inner
+            .exclusive_session(|inner| inner.cpu_usrtime_accumulation)
     }
 }

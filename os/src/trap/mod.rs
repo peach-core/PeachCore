@@ -4,7 +4,17 @@ use crate::{
     config::TRAMPOLINE,
     syscall::syscall,
     task::{
-        check_signals_of_current, current_add_signal, current_process, current_task, current_trap_ctx, current_trap_ctx_user_va, current_user_token, exit_current_and_run_next, suspend_current_and_run_next, SignalFlags
+        check_signals_of_current,
+        current_add_signal,
+        current_process,
+        current_task,
+        current_trap_ctx,
+        current_trap_ctx_user_va,
+        current_user_token,
+        exit_current_and_run_next,
+        get_processor_slice_time,
+        suspend_current_and_run_next,
+        SignalFlags,
     },
     timer::{
         check_timer,
@@ -79,6 +89,12 @@ fn disable_supervisor_interrupt() {
 #[no_mangle]
 pub fn trap_handler() -> ! {
     set_kernel_trap_entry();
+
+    {
+        let process = current_process();
+        process.accumulate_usrtime(get_processor_slice_time());
+    }
+
     let scause = scause::read();
     let stval = stval::read();
     // println!("into {:?}", scause.cause());
@@ -146,6 +162,10 @@ pub fn trap_handler() -> ! {
 pub fn trap_return() -> ! {
     disable_supervisor_interrupt();
     set_user_trap_entry();
+    {
+        let process = current_process();
+        process.accumulate_systime(get_processor_slice_time());
+    }
     let trap_ctx_user_va = current_trap_ctx_user_va();
     let user_satp = current_user_token();
     extern "C" {
@@ -183,7 +203,10 @@ pub fn trap_from_kernel(_trap_ctx: &TrapContext) {
             panic!(
                 "pid: {}, tid: {}, Unsupported trap from kernel: {:?}, stval = {:#x}!",
                 current_process().getpid(),
-                current_task().unwrap().inner.exclusive_session(|inner| inner.res.as_ref().unwrap().tid),
+                current_task()
+                    .unwrap()
+                    .inner
+                    .exclusive_session(|inner| inner.res.as_ref().unwrap().tid),
                 scause.cause(),
                 stval
             );

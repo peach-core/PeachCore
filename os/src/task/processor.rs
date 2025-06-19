@@ -8,11 +8,11 @@ use super::{
 };
 use crate::{
     sync::UPIntrFreeCell,
-    trap::TrapContext,
     timer::get_time,
+    trap::TrapContext,
 };
 use alloc::sync::Arc;
-use core::arch::asm;
+use core::{arch::asm, sync::atomic::{AtomicUsize, Ordering}};
 use lazy_static::*;
 
 pub struct Processor {
@@ -43,6 +43,20 @@ lazy_static! {
         unsafe { UPIntrFreeCell::new(Processor::new()) };
 }
 
+/// use get_processor_slice_time to get time spent in current status.
+/// NOTE: get_processor_slice_time while update PRE_PROCESSOR_CUT_TIME to current [`get_time`].
+/// accumulate slice time into [`ProcessControlBlock`].cpu_usrtime_accumulation at the entry of 
+/// [`trap_handler`]. AND accumulate slice time into [`ProcessControlBlock`].cpu_systime_accumulation 
+/// as the end of [`trap_return`] and before [`schedule`].
+static PRE_PROCESSOR_CUT_TIME: AtomicUsize = AtomicUsize::new(0);
+
+pub fn get_processor_slice_time() -> usize {
+    let cur_time = get_time();
+    let pre_time = PRE_PROCESSOR_CUT_TIME.load(Ordering::Acquire);
+    PRE_PROCESSOR_CUT_TIME.store(cur_time, Ordering::Release);
+    cur_time - pre_time
+}
+
 pub fn run_tasks() {
     loop {
         let mut processor = PROCESSOR.exclusive_access();
@@ -51,7 +65,6 @@ pub fn run_tasks() {
             // access coming task TCB exclusively
             let next_task_ctx_ptr = task.inner.exclusive_session(|task_inner| {
                 task_inner.task_status = TaskStatus::Running;
-                task_inner.cpu_entry_time = get_time();
                 &task_inner.task_ctx as *const TaskContext
             });
             processor.current = Some(task);

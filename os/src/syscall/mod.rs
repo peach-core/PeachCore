@@ -25,7 +25,7 @@ use thread::*;
 extern crate shared_defination;
 use shared_defination::{
     syscall_nr::call,
-    sysinfo::Sysinfo,
+    sysinfo::Sysinfo, times::Tms,
 };
 use sys::sys_uname;
 use user_space::__user;
@@ -52,7 +52,7 @@ pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
         call::NANOSLEEP => sys_nanosleep(__user::new(args[0] as *mut TimeVal)),
         call::SCHED_YIELD => sys_yield(),
         call::KILL => sys_kill(args[0], args[1] as u32),
-        call::TIMES => sys_times(args[0] as usize),
+        call::TIMES => sys_times(__user::new(args[0] as *mut Tms)),
         call::UNAME => sys_uname(__user::new(args[0] as *mut Sysinfo)),
         call::GETTIMEOFDAY => sys_get_time(__user::new(args[0] as *mut TimeVal), args[1] as i32),
         call::GETPID => sys_getpid(),
