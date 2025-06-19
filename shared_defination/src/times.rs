@@ -1,4 +1,4 @@
-pub struct Tms {
+pub struct tms {
     pub tms_systime: usize,
     pub tms_usrtime: usize,
     pub tms_child_systime: usize,

@@ -4,29 +4,27 @@
 #[macro_use]
 extern crate user_lib;
 
-use core::default;
-
-use user_lib::{sleep, times, fork, yield_, Tms};
+use user_lib::{sleep, times, fork, yield_};
 
 #[no_mangle]
 pub fn main() -> i32 {
     let pid = fork();
     if pid == 0 {
-        let mut tms: Tms = Default::default();
-        let tms_ptr: *mut Tms = &mut tms;
+        let mut tms: [usize; 4] = [0; 4];
+        let tms_ptr: *mut [usize; 4] = &mut tms;
         times(tms_ptr);
-        println!("{},{}",tms.tms_usrtime,tms.tms_systime);
-        println!("{},{}",tms.tms_child_usrtime,tms.tms_child_systime);
+        println!("{},{}",tms[0],tms[1]);
+        println!("{},{}",tms[2],tms[3]);
         sleep(10000);
         yield_();
     }
     else {
         sleep(500);
-        let mut tms: Tms = Default::default();
-        let tms_ptr: *mut Tms = &mut tms;
+        let mut tms: [usize; 4] = [0; 4];
+        let tms_ptr: *mut [usize; 4] = &mut tms;
         times(tms_ptr);
-        println!("{},{}",tms.tms_usrtime,tms.tms_systime);
-        println!("{},{}",tms.tms_child_usrtime,tms.tms_child_systime);
+        println!("{},{}",tms[0],tms[1]);
+        println!("{},{}",tms[2],tms[3]);
     }
     0
 }
