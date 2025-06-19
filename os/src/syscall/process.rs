@@ -285,15 +285,20 @@ pub fn sys_kill(pid: usize, signal: u32) -> isize {
 }
 
 pub fn sys_times(times: usize) -> isize {
+    if times==0 {return -1}
+
     let process = current_process();
-    let tms = (process.inner_exclusive_access().memory_set.translate_va(times)) as *mut Tms;
+    let tms_usrtime = translated_refmut(current_user_token(), __user::from((times + 0x00) as *mut usize));
+    let tms_systime = translated_refmut(current_user_token(), __user::from((times + 0x08) as *mut usize));
+    let tms_child_usrtime = translated_refmut(current_user_token(), __user::from((times + 0x10) as *mut usize));
+    let tms_child_systime = translated_refmut(current_user_token(), __user::from((times + 0x18) as *mut usize));
     for tcb in &(process.inner_exclusive_access().tasks) {
         if let Some(task) = (*tcb).as_ref() {
             let task_inner = task.inner_exclusive_access();
-            unsafe{
-                (*tms).tms_usrtime += task_inner.cpu_usrtime_accumulation;
-                (*tms).tms_systime += task_inner.cpu_systime_accumulation;
-            }
+            //unsafe{
+                *tms_usrtime += task_inner.cpu_usrtime_accumulation;
+                *tms_systime += task_inner.cpu_systime_accumulation;
+            //}
         }
     }
     let mut child_pcb_vec:VecDeque<Arc<ProcessControlBlock>> = Default::default();
@@ -303,10 +308,10 @@ pub fn sys_times(times: usize) -> isize {
             for child_tcb in &(child_pcb.inner_exclusive_access().tasks) {
                 if let Some(task) = (*child_tcb).as_ref() {
                     let task_inner = task.inner_exclusive_access();
-                    unsafe{
-                        (*tms).tms_child_usrtime += task_inner.cpu_usrtime_accumulation;
-                        (*tms).tms_child_systime += task_inner.cpu_systime_accumulation;
-                    }
+                    //unsafe{
+                        *tms_child_usrtime += task_inner.cpu_usrtime_accumulation;
+                        *tms_child_systime += task_inner.cpu_systime_accumulation;
+                    //}
                 }
             }
             for child_pcb_child in &(child_pcb.inner_exclusive_access().children) {
