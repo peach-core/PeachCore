@@ -17,6 +17,23 @@ pub struct TimeVal {
     pub usec: u64, // 微秒数
 }
 
+pub struct Tms {
+    pub tms_usrtime: usize,
+    pub tms_systime: usize,
+    pub tms_child_usrtime: usize,
+    pub tms_child_systime: usize,
+}
+impl Default for Tms{
+    fn default() -> Self {
+        Tms { 
+            tms_usrtime: 0, 
+            tms_systime: 0, 
+            tms_child_usrtime: 0, 
+            tms_child_systime: 0 
+        }
+    }
+}
+
 fn syscall(id: usize, args: [usize; 3]) -> isize {
     let mut ret: isize;
     unsafe {
@@ -88,7 +105,7 @@ pub fn sys_kill(pid: usize, signal: i32) -> isize {
     syscall(call::KILL, [pid, signal as usize, 0])
 }
 
-pub fn sys_times(tms: *mut [usize; 4]) -> isize {
+pub fn sys_times(tms: *mut Tms) -> isize {
     syscall(call::TIMES, [tms as usize, 0, 0])
 }
 
