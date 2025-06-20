@@ -117,22 +117,14 @@ where
         self.fs
             .lock()
             .tx(|tx| {
-                let mut childs = alloc::vec::Vec::new();
-                tx.child_nodes(self.node_ptr, &mut childs)?;
-                let node = childs
-                    .into_iter()
-                    .find(|e| e.name().map_or(false, |n| n == name));
-                
-                match node {
-                    Some(n) => Ok(n.node_ptr()),
-                    None => Err(syscall::Error::new(syscall::ENOENT)),
-                }
+                log::info!("qwe");
+                tx.find_node(self.node_ptr, name)
             })
             .ok()
             .map(|node| {
                 Arc::new(RefoxInode {
                     fs: self.fs.clone(),
-                    node_ptr: node,
+                    node_ptr: node.ptr(),
                 })
             })
     }
