@@ -10,6 +10,7 @@ use spin::Mutex;
 use crate::{
     fs::Inode,
     timer,
+    fs::Result,
 };
 
 pub struct RefoxInode<D>
@@ -177,5 +178,25 @@ where
                     node_ptr: TreePtr::new(0),
                 })
             })
+    }
+
+    fn linkat(&self, name: &str, inode: Arc<Self>) -> Result<()> {
+        self.fs
+            .lock()
+            .tx(|tx| {
+                tx.link_node(
+                    self.node_ptr,
+                    name,
+                    inode.node_ptr(),
+                )
+            })
+            .ok()
+    }
+
+    fn unlinkat(&self, name: &str) -> Result<()> {
+        self.fs
+            .lock()
+            .tx(|tx| tx.remove_node(self.node_ptr, name, Node::MODE_FILE))
+            .ok()
     }
 }

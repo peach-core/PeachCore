@@ -25,6 +25,7 @@ pub use file::{
     list_apps,
     open_file,
 };
+pub use vfs::Result;
 
 pub type SysFileSystem = redoxfs::FileSystem<CoreDisk<Arc<VirtIOBlock>>>;
 

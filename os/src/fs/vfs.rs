@@ -1,8 +1,12 @@
+use core::error::Error;
+
 use alloc::{
     string::String,
     sync::Arc,
     vec::Vec,
 };
+
+pub type Result<T> = Option<T>;
 
 pub trait Inode: Send + Sync + 'static {
     fn read_at(&self, offset: usize, buf: &mut [u8]) -> usize;
@@ -21,9 +25,9 @@ pub trait Inode: Send + Sync + 'static {
 
     fn rmdir(&self, name: &str) -> Option<Arc<Self>>;
 
-    fn linkat(&self, name: &str, inode: Arc<Self>) -> Option<Arc<Self>> {
-        None
-    }
+    fn linkat(&self, name: &str, inode: Arc<Self>) -> Result<()>;
+
+    fn unlinkat(&self, name: &str) -> Result<()>;
 }
 
 pub trait FileSystemTrait: Send + Sync {
