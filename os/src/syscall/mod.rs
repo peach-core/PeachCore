@@ -20,12 +20,14 @@ use mm::{
 use net::*;
 use process::*;
 use sync::*;
-use sys::sys_uname;
 use thread::*;
-use crate::{task::current_task,timer::get_time};
 #[allow(unused)]
 extern crate shared_defination;
-use shared_defination::syscall_nr::call;
+use shared_defination::{
+    syscall_nr::call,
+    sysinfo::Sysinfo, times::Tms,
+};
+use sys::sys_uname;
 use user_space::__user;
 
 use crate::sync::sys_futex;
@@ -37,12 +39,7 @@ pub struct TimeVal {
 }
 
 pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
-    if let Some(current_tcb) = current_task(){
-        let mut tcb_inner=current_tcb.inner_exclusive_access();
-        tcb_inner.accumulate_usrtime();
-        tcb_inner.cpu_entry_time = get_time();
-    }
-    let re = match syscall_id {
+    match syscall_id {
         // net
         call::DUP => sys_dup(args[0]),
         call::DUP3 => sys_dup3(args[0], args[1], args[2]),
@@ -55,8 +52,8 @@ pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
         call::NANOSLEEP => sys_nanosleep(__user::new(args[0] as *mut TimeVal)),
         call::SCHED_YIELD => sys_yield(),
         call::KILL => sys_kill(args[0], args[1] as u32),
-        call::TIMES => sys_times(args[0] as usize),
-        call::UNAME => sys_uname(args[0] as usize),
+        call::TIMES => sys_times(__user::new(args[0] as *mut Tms)),
+        call::UNAME => sys_uname(__user::new(args[0] as *mut Sysinfo)),
         call::GETTIMEOFDAY => sys_get_time(__user::new(args[0] as *mut TimeVal), args[1] as i32),
         call::GETPID => sys_getpid(),
         call::CLONE => sys_clone(
@@ -130,11 +127,5 @@ pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
         call::MUNMAP => sys_munmap(args[0]),
 
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
-    };
-    if let Some(current_tcb) = current_task(){
-        let mut tcb_inner=current_tcb.inner_exclusive_access();
-        tcb_inner.accumulate_systime();
-        tcb_inner.cpu_entry_time = get_time();
     }
-    re
 }

@@ -37,6 +37,7 @@ use crate::{
     },
     syscall::user_space::__user,
     task::fd_table::FdTable,
+    timer::get_time,
     trap::{
         trap_handler,
         TrapContext,
@@ -52,6 +53,7 @@ use alloc::{
     vec,
     vec::Vec,
 };
+use shared_defination::times::Tms;
 
 pub struct ProcessControlBlock {
     // immutable
@@ -73,6 +75,7 @@ pub struct ProcessControlBlockInner {
     // =====================================================
     pub is_zombie: bool,                                    // is_zombie process
     pub exit_code: i32,                                     // exit code
+    pub times: Tms,                                         // cpu times for current and all dead childs.
 
 
     // =====================================================
@@ -101,10 +104,11 @@ pub struct ProcessControlBlockInner {
     pub mutex_list: Vec<Option<Arc<dyn Mutex>>>,
     pub semaphore_list: Vec<Option<Arc<Semaphore>>>,
     pub condvar_list: Vec<Option<Arc<Condvar>>>,
+
     pub program_brk_bottom: usize,                          // user heap lowerbound.
     pub current_heap_top: usize,                            // current upperbound os heap.
     pub privilege: Privilege,                               // U-Mode Process or K-Mode Thread.
-    pub futex_table: BTreeMap<usize, WaitQueue>,               // futex_list
+    pub futex_table: BTreeMap<usize, WaitQueue>,            // futex_list
 }
 
 impl ProcessControlBlockInner {
@@ -208,6 +212,15 @@ impl ProcessControlBlockInner {
         assert_eq!(addr & (PAGE_SIZE - 1), 0);
         self.memory_set.munmap(addr.into())
     }
+
+    #[allow(unused)]
+    pub fn accumulate_usrtime(&mut self, time: usize) {
+        self.times.tms_usrtime += time;
+    }
+    #[allow(unused)]
+    pub fn accumulate_systime(&mut self, time: usize) {
+        self.times.tms_systime += time;
+    }
 }
 
 impl ProcessControlBlock {
@@ -242,6 +255,7 @@ impl ProcessControlBlock {
             inner: unsafe {
                 UPIntrFreeCell::new(ProcessControlBlockInner {
                     is_zombie: false,
+                    times: Tms::new(),
                     memory_set,
                     parent: None,
                     children: Vec::new(),
@@ -317,6 +331,7 @@ impl ProcessControlBlock {
             inner: unsafe {
                 UPIntrFreeCell::new(ProcessControlBlockInner {
                     is_zombie: false,
+                    times: Tms::new(),
                     memory_set: MemorySet::new_bare(),
                     parent: None,
                     children: Vec::new(),
@@ -438,6 +453,7 @@ impl ProcessControlBlock {
             inner: unsafe {
                 UPIntrFreeCell::new(ProcessControlBlockInner {
                     is_zombie: false,
+                    times: Tms::new(),
                     memory_set,
                     parent: Some(Arc::downgrade(self)),
                     children: Vec::new(),
@@ -532,5 +548,36 @@ impl ProcessControlBlock {
     pub fn current_task_munmap(&self, addr: usize) -> isize {
         let mut inner = self.inner_exclusive_access();
         inner.current_task_munmap(addr)
+    }
+
+    // ===========================================
+    //              Count the CPU time
+    // ===========================================
+    pub fn accumulate_systime(&self, time: usize) {
+        let mut inner = self.inner_exclusive_access();
+        inner.accumulate_systime(time);
+    }
+    pub fn accumulate_usrtime(&self, time: usize) {
+        let mut inner = self.inner_exclusive_access();
+        inner.accumulate_usrtime(time);
+    }
+    pub fn get_usrtime(&self) -> usize {
+        self.inner
+            .exclusive_session(|inner| inner.times.tms_usrtime)
+    }
+    pub fn get_systime(&self) -> usize {
+        self.inner
+            .exclusive_session(|inner| inner.times.tms_systime)
+    }
+    pub fn get_child_usrtime(&self) -> usize {
+        self.inner
+            .exclusive_session(|inner| inner.times.tms_child_usrtime)
+    }
+    pub fn get_chlid_systime(&self) -> usize {
+        self.inner
+            .exclusive_session(|inner| inner.times.tms_child_systime)
+    }
+    pub fn get_times(&self) -> Tms {
+        self.inner.exclusive_session(|inner| inner.times.clone())
     }
 }

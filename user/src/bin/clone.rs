@@ -65,8 +65,12 @@ fn child_thread(ptr: *mut u8) {
     let args = unsafe { (thread.args as usize as *mut ArgType).as_mut().unwrap() };
 
     let tid = gettid() as usize;
+    let mut t = 1;
+    for i in 0..(6 - tid) {
+        t *= 2;
+    }
     println!("{}  [thread{}].", args.s, tid);
-    for i in 0..10 {
+    for i in 0..t * 2 {
         let mut num = tid;
         for j in 0..5000000 {
             num = (num * (i + j + tid)) % (1e9 as usize + 7);

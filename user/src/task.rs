@@ -9,7 +9,7 @@ pub fn yield_() -> isize {
 pub fn get_time() -> isize {
     sys_get_time()
 }
-pub fn times(tms: *mut Tms) -> isize {
+pub fn times(tms: *mut [usize; 4]) -> isize {
     sys_times(tms)
 }
 pub fn getpid() -> isize {

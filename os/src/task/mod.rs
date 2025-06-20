@@ -65,6 +65,7 @@ pub use processor::{
     current_trap_ctx,
     current_trap_ctx_user_va,
     current_user_token,
+    get_processor_slice_time,
     run_tasks,
     schedule,
     take_current_task,
@@ -78,6 +79,9 @@ pub use task::{
 pub fn suspend_current_and_run_next() {
     // There must be an application running.
     let task = take_current_task().unwrap();
+
+    let process = task.process.upgrade().unwrap();
+    process.accumulate_systime(get_processor_slice_time());
 
     // ---- access current TCB exclusively
     let mut task_inner = task.inner_exclusive_access();
@@ -97,12 +101,14 @@ pub fn suspend_current_and_run_next() {
 pub fn block_current_task() -> *mut TaskContext {
     let task = take_current_task().unwrap();
     let mut task_inner = task.inner_exclusive_access();
-    task_inner.accumulate_usrtime();
     task_inner.task_status = TaskStatus::Blocked;
     &mut task_inner.task_ctx as *mut TaskContext
 }
 
 pub fn block_current_and_run_next() {
+    let process = current_process();
+    process.accumulate_systime(get_processor_slice_time());
+    drop(process);
     let task_ctx_ptr = block_current_task();
     schedule(task_ctx_ptr);
 }
@@ -113,7 +119,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     let mut task_inner = task.inner_exclusive_access();
     let process = task.process.upgrade().unwrap();
     let tid = task_inner.res.as_ref().unwrap().tid;
-    task_inner.accumulate_usrtime();
+
     if task.clone_flags & CLONE_CHILD_CLEARTID != 0 {
         const FUTEX_WAKE: isize = 1;
         let uaddr = __user::new(task.ctid_ptr as *mut u32);
@@ -126,6 +132,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     if task.clone_flags & CLONE_VM != 0 {
         is_thread = true;
     }
+
     // record exit code
     task_inner.exit_code = Some(exit_code & (0xff));
     task_inner.res = None;
@@ -203,6 +210,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
             process_inner.tasks.pop();
         }
     }
+    // process.accumulate_systime(get_processor_slice_time());
     drop(process);
     // we do not have to save task context
     let mut _unused = TaskContext::zero_init();

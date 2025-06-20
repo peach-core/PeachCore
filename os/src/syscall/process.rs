@@ -1,4 +1,5 @@
 use crate::{
+    board::CLOCK_FREQ,
     fs::{
         open_file,
         OpenFlags,
@@ -31,11 +32,13 @@ use alloc::{
     sync::Arc,
     vec::Vec,
 };
-use shared_defination::clone::{
-    self,
-    flag::CLONE_PARENT_SETTID,
+use shared_defination::{
+    clone::{
+        self,
+        flag::CLONE_PARENT_SETTID,
+    },
+    times::Tms,
 };
-use shared_defination::times::Tms;
 
 use super::{
     user_space::__user,
@@ -158,7 +161,7 @@ pub fn sys_clone(
     }
     tasks[new_task_tid] = Some(Arc::clone(&new_task));
     let new_task_trap_ctx = new_task_inner.get_trap_ctx();
-    let mut task_inner = task.inner_exclusive_access();
+    let task_inner = task.inner_exclusive_access();
     *new_task_trap_ctx = *task_inner.get_trap_ctx();
     (*new_task_trap_ctx).x[2] = stack;
     (*new_task_trap_ctx).x[10] = 0;
@@ -172,10 +175,10 @@ pub fn sys_clone(
             return -1;
         }
     }
-    
+
     // add new task to scheduler
     add_task(Arc::clone(&new_task));
-    
+
     new_task_tid as isize
 }
 
@@ -255,6 +258,17 @@ fn waitpid(pid: isize, exit_code_ptr: __user<*mut i32>) -> isize {
     });
     if let Some((idx, _)) = pair {
         let child = inner.children.remove(idx);
+
+        {
+            let sys_timme = child.get_systime();
+            let csys_timme = child.get_chlid_systime();
+            inner.accumulate_systime(sys_timme + csys_timme);
+        }
+        {
+            // let usr_timme = child.get_usrtime();
+            // let cusr_timme = child.get_child_usrtime();
+            // process.accumulate_usrtime(usr_timme + cusr_timme);
+        }
         // confirm that child will be deallocated after being removed from children list
         assert_eq!(Arc::strong_count(&child), 1);
         let found_pid = child.getpid();
@@ -284,41 +298,64 @@ pub fn sys_kill(pid: usize, signal: u32) -> isize {
     }
 }
 
-pub fn sys_times(times: usize) -> isize {
-    if times==0 {return -1}
+pub fn sys_times(times_uaddr: __user<*mut Tms>) -> isize {
+    if times_uaddr.inner() as usize == 0 {
+        return -1;
+    }
+    let times_uaddr = times_uaddr.inner() as usize;
 
     let process = current_process();
-    let tms_usrtime = translated_refmut(current_user_token(), __user::from((times + 0x00) as *mut usize));
-    let tms_systime = translated_refmut(current_user_token(), __user::from((times + 0x08) as *mut usize));
-    let tms_child_usrtime = translated_refmut(current_user_token(), __user::from((times + 0x10) as *mut usize));
-    let tms_child_systime = translated_refmut(current_user_token(), __user::from((times + 0x18) as *mut usize));
-    for tcb in &(process.inner_exclusive_access().tasks) {
-        if let Some(task) = (*tcb).as_ref() {
-            let task_inner = task.inner_exclusive_access();
-            //unsafe{
-                *tms_usrtime += task_inner.cpu_usrtime_accumulation;
-                *tms_systime += task_inner.cpu_systime_accumulation;
-            //}
-        }
+    let mut tms_usrtime = translated_refmut(
+        current_user_token(),
+        __user::from((times_uaddr + 0x00) as *mut usize),
+    );
+    let mut tms_systime = translated_refmut(
+        current_user_token(),
+        __user::from((times_uaddr + 0x08) as *mut usize),
+    );
+    let mut tms_child_usrtime = translated_refmut(
+        current_user_token(),
+        __user::from((times_uaddr + 0x10) as *mut usize),
+    );
+    let mut tms_child_systime = translated_refmut(
+        current_user_token(),
+        __user::from((times_uaddr + 0x18) as *mut usize),
+    );
+
+    let process = current_process();
+
+    {
+        let times = process.get_times();
+        *tms_usrtime = times.tms_usrtime;
+        *tms_systime = times.tms_systime;
+        *tms_child_usrtime = times.tms_child_usrtime;
+        *tms_child_systime = times.tms_child_systime;
+        drop(times);
     }
-    let mut child_pcb_vec:VecDeque<Arc<ProcessControlBlock>> = Default::default();
-    child_pcb_vec.push_back(process.clone());
-    loop {
-        if let Some(child_pcb) = child_pcb_vec.pop_front(){
-            for child_tcb in &(child_pcb.inner_exclusive_access().tasks) {
-                if let Some(task) = (*child_tcb).as_ref() {
-                    let task_inner = task.inner_exclusive_access();
-                    //unsafe{
-                        *tms_child_usrtime += task_inner.cpu_usrtime_accumulation;
-                        *tms_child_systime += task_inner.cpu_systime_accumulation;
-                    //}
-                }
-            }
-            for child_pcb_child in &(child_pcb.inner_exclusive_access().children) {
-                child_pcb_vec.push_back((*child_pcb_child).clone());
-            }
+
+    let inner = process.inner_exclusive_access();
+    inner.children.iter().for_each(|child| {
+        let child_inner = child.inner_exclusive_access();
+        if child_inner.is_zombie {
+            let times = &child_inner.times;
+            *tms_child_usrtime += times.tms_usrtime + times.tms_child_usrtime;
+            *tms_child_systime += times.tms_systime + times.tms_child_systime;
         }
-        else {break;}
-    }
+    });
+
+    *tms_usrtime /= CLOCK_FREQ;
+    *tms_systime /= CLOCK_FREQ;
+    *tms_child_usrtime /= CLOCK_FREQ;
+    *tms_child_systime /= CLOCK_FREQ;
+
+    // for child in inner.children.iter() {
+    //     let child_inner = child.inner_exclusive_access();
+    //     if child_inner.is_zombie {
+    //         let times = &child_inner.times;
+    //         *tms_child_usrtime += times.tms_usrtime + times.tms_child_usrtime;
+    //         *tms_child_systime += times.tms_systime + times.tms_child_systime;
+    //     }
+    // }
+
     0
 }
