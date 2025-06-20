@@ -1,4 +1,5 @@
 use crate::{
+    board::CLOCK_FREQ,
     fs::{
         open_file,
         OpenFlags,
@@ -257,6 +258,17 @@ fn waitpid(pid: isize, exit_code_ptr: __user<*mut i32>) -> isize {
     });
     if let Some((idx, _)) = pair {
         let child = inner.children.remove(idx);
+
+        {
+            let sys_timme = child.get_systime();
+            let csys_timme = child.get_chlid_systime();
+            inner.accumulate_systime(sys_timme + csys_timme);
+        }
+        {
+            // let usr_timme = child.get_usrtime();
+            // let cusr_timme = child.get_child_usrtime();
+            // process.accumulate_usrtime(usr_timme + cusr_timme);
+        }
         // confirm that child will be deallocated after being removed from children list
         assert_eq!(Arc::strong_count(&child), 1);
         let found_pid = child.getpid();
@@ -286,11 +298,11 @@ pub fn sys_kill(pid: usize, signal: u32) -> isize {
     }
 }
 
-pub fn sys_times(times: __user<*mut Tms>) -> isize {
-    if times.inner() as usize == 0 {
+pub fn sys_times(times_uaddr: __user<*mut Tms>) -> isize {
+    if times_uaddr.inner() as usize == 0 {
         return -1;
     }
-    let times_uaddr = times.inner() as usize;
+    let times_uaddr = times_uaddr.inner() as usize;
 
     let process = current_process();
     let mut tms_usrtime = translated_refmut(
@@ -311,8 +323,39 @@ pub fn sys_times(times: __user<*mut Tms>) -> isize {
     );
 
     let process = current_process();
-    *tms_usrtime = process.get_usrtime();
-    *tms_systime = process.get_systime();
-    
+
+    {
+        let times = process.get_times();
+        *tms_usrtime = times.tms_usrtime;
+        *tms_systime = times.tms_systime;
+        *tms_child_usrtime = times.tms_child_usrtime;
+        *tms_child_systime = times.tms_child_systime;
+        drop(times);
+    }
+
+    let inner = process.inner_exclusive_access();
+    inner.children.iter().for_each(|child| {
+        let child_inner = child.inner_exclusive_access();
+        if child_inner.is_zombie {
+            let times = &child_inner.times;
+            *tms_child_usrtime += times.tms_usrtime + times.tms_child_usrtime;
+            *tms_child_systime += times.tms_systime + times.tms_child_systime;
+        }
+    });
+
+    *tms_usrtime /= CLOCK_FREQ;
+    *tms_systime /= CLOCK_FREQ;
+    *tms_child_usrtime /= CLOCK_FREQ;
+    *tms_child_systime /= CLOCK_FREQ;
+
+    // for child in inner.children.iter() {
+    //     let child_inner = child.inner_exclusive_access();
+    //     if child_inner.is_zombie {
+    //         let times = &child_inner.times;
+    //         *tms_child_usrtime += times.tms_usrtime + times.tms_child_usrtime;
+    //         *tms_child_systime += times.tms_systime + times.tms_child_systime;
+    //     }
+    // }
+
     0
 }
